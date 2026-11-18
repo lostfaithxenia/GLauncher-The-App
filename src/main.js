@@ -141,11 +141,15 @@ function sanitizeStore(parsed) {
           id: String(p.id || `profile-${idx + 1}`),
           name: String(p.name || `Player ${idx + 1}`).slice(0, 28),
           handle: String(p.handle || `@${String(p.name || `player${idx + 1}`).toLowerCase().replace(/[^a-z0-9_]/g, '')}`),
+          pronouns: String(p.pronouns || '').slice(0, 24),
           color: String(p.color || '#38bdf8'),
           avatar: String(p.avatar || './assets/maxmb/icons/avatars/firmware/000.png'),
           banner: String(p.banner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)'),
           profilePrimaryColor: String(p.profilePrimaryColor || '#1e1b4b'),
           profileAccentColor: String(p.profileAccentColor || p.color || '#38bdf8'),
+          profileEffect: String(p.profileEffect || 'none'),
+          avatarDecoration: String(p.avatarDecoration || 'none'),
+          colorSwatch: String(p.colorSwatch || 'obsidian'),
           badges: Array.isArray(p.badges) ? p.badges.slice(0, 12) : ['alpha-pioneer'],
           friends: Array.isArray(p.friends)
             ? p.friends
@@ -805,6 +809,7 @@ function waitForGameWindowAndSuspend(exeName, pid) {
 
 function resumeLauncherFromGame() {
   clearGameWaitTimer();
+  stopTrophyWatch();
   if (gameWatchTimer) {
     clearInterval(gameWatchTimer);
     gameWatchTimer = null;
@@ -862,6 +867,372 @@ function startProcessWatch(exeName) {
 
 let activeVcState = { active: false, roomId: '', participants: [] };
 let vcHudWindow = null;
+let trophyHudWindow = null;
+let trophyHudHideTimer = null;
+let trophyWatchTimer = null;
+let activeTrophyContext = null;
+
+const MINECRAFT_ADVANCEMENTS = [
+  { apiName: 'minecraft:story/root', title: 'Minecraft', desc: 'The heart and story of the game', grade: 'bronze', pct: 95 },
+  { apiName: 'minecraft:story/mine_stone', title: 'Stone Age', desc: 'Mine stone with your new pickaxe', grade: 'bronze', pct: 88 },
+  { apiName: 'minecraft:story/upgrade_tools', title: 'Getting an Upgrade', desc: 'Construct a better pickaxe', grade: 'bronze', pct: 82 },
+  { apiName: 'minecraft:story/smelt_iron', title: 'Acquire Hardware', desc: 'Smelt an iron ingot', grade: 'bronze', pct: 75 },
+  { apiName: 'minecraft:story/obtain_armor', title: 'Suit Up', desc: 'Protect yourself with a piece of iron armor', grade: 'bronze', pct: 68 },
+  { apiName: 'minecraft:story/iron_tools', title: "Isn't It Iron Pick", desc: 'Upgrade your pickaxe', grade: 'bronze', pct: 65 },
+  { apiName: 'minecraft:story/mine_diamond', title: 'Diamonds!', desc: 'Acquire diamonds', grade: 'silver', pct: 48 },
+  { apiName: 'minecraft:story/shiny_gear', title: 'Cover Me with Diamonds', desc: 'Diamond armor saves lives', grade: 'silver', pct: 36 },
+  { apiName: 'minecraft:story/enter_the_nether', title: 'We Need to Go Deeper', desc: 'Build, light and enter a Nether Portal', grade: 'silver', pct: 34 },
+  { apiName: 'minecraft:story/follow_ender_eye', title: 'Eye Spy', desc: 'Follow an Ender Eye', grade: 'gold', pct: 18 },
+  { apiName: 'minecraft:story/enter_the_end', title: 'The End?', desc: 'Enter the End Portal', grade: 'gold', pct: 14 },
+  { apiName: 'minecraft:end/kill_dragon', title: 'Free the End', desc: 'Good luck', grade: 'gold', pct: 9 }
+];
+
+function extractLocalSteamAppId(exePath) {
+  if (!exePath || !fs.existsSync(exePath)) return '';
+  const dir = path.dirname(exePath);
+  const dirsToCheck = [dir, path.dirname(dir), path.join(dir, 'steam_settings')];
+  for (const d of dirsToCheck) {
+    const appIdTxt = path.join(d, 'steam_appid.txt');
+    if (fs.existsSync(appIdTxt)) {
+      try {
+        const m = fs.readFileSync(appIdTxt, 'utf8').match(/\b(\d{3,8})\b/);
+        if (m) return m[1];
+      } catch {}
+    }
+    const iniFiles = ['steam_emu.ini', 'codex.ini', 'rune.ini', 'tenoke.ini', 'flt.ini', 'SmartSteamEmu.ini', 'OnlineFix.ini'];
+    for (const f of iniFiles) {
+      const fp = path.join(d, f);
+      if (fs.existsSync(fp)) {
+        try {
+          const m = fs.readFileSync(fp, 'utf8').match(/AppId\s*=\s*(\d{3,8})/i);
+          if (m) return m[1];
+        } catch {}
+      }
+    }
+  }
+  return '';
+}
+
+function getLocalAchievementPaths(appId, exePath) {
+  const paths = [];
+  if (appId) {
+    const appData = process.env.APPDATA || '';
+    const pubDocs = 'C:\\Users\\Public\\Documents';
+    const candidates = [
+      path.join(appData, 'Goldberg SteamEmu Saves', appId, 'achievements.json'),
+      path.join(appData, 'GSE Saves', appId, 'achievements.json'),
+      path.join(appData, 'EMPRESS', appId, 'remote', appId, 'achievements.json'),
+      path.join(appData, 'Steam', 'CODEX', appId, 'achievements.ini'),
+      path.join(pubDocs, 'Steam', 'CODEX', appId, 'achievements.ini'),
+      path.join(pubDocs, 'Steam', 'RUNE', appId, 'achievements.ini'),
+      path.join(pubDocs, 'OnlineFix', appId, 'Stats', 'Achievements.ini')
+    ];
+    if (exePath && fs.existsSync(exePath)) {
+      const dir = path.dirname(exePath);
+      candidates.push(path.join(dir, 'steam_settings', 'achievements.json'));
+      candidates.push(path.join(dir, 'SteamData', 'user_stats.ini'));
+    }
+    for (const p of candidates) {
+      if (p && !paths.includes(p)) paths.push(p);
+    }
+  }
+  return paths;
+}
+
+function readUnlockedFromLocalFiles(watchPaths, isMinecraft = false) {
+  const unlocked = new Map(); // apiName -> timestampMs
+  if (isMinecraft) {
+    const savesDir = process.env.APPDATA ? path.join(process.env.APPDATA, '.minecraft', 'saves') : '';
+    if (savesDir && fs.existsSync(savesDir)) {
+      try {
+        const worlds = fs.readdirSync(savesDir, { withFileTypes: true }).filter((d) => d.isDirectory());
+        for (const w of worlds) {
+          const advDir = path.join(savesDir, w.name, 'advancements');
+          if (!fs.existsSync(advDir)) continue;
+          const files = fs.readdirSync(advDir).filter((f) => f.endsWith('.json'));
+          for (const f of files) {
+            try {
+              const json = JSON.parse(fs.readFileSync(path.join(advDir, f), 'utf8'));
+              for (const [k, v] of Object.entries(json || {})) {
+                if (v && v.done === true) unlocked.set(k, Date.now());
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+    return unlocked;
+  }
+
+  for (const fp of watchPaths) {
+    if (!fs.existsSync(fp)) continue;
+    try {
+      const raw = fs.readFileSync(fp, 'utf8');
+      if (fp.endsWith('.json')) {
+        const json = JSON.parse(raw);
+        if (Array.isArray(json)) {
+          for (const item of json) {
+            if (item?.name && (item.earned || item.achieved)) {
+              unlocked.set(item.name, (item.earned_time || 0) * 1000 || Date.now());
+            }
+          }
+        } else if (json && typeof json === 'object') {
+          for (const [k, v] of Object.entries(json)) {
+            if (v === true || v?.earned === true || v?.achieved === 1 || v?.achieved === true) {
+              unlocked.set(k, (v?.earned_time || 0) * 1000 || Date.now());
+            }
+          }
+        }
+      } else {
+        // INI format (CODEX / RUNE / OnlineFix / TENOKE)
+        let currentSection = '';
+        for (const line of raw.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          const sec = trimmed.match(/^\[(.+)\]$/);
+          if (sec) {
+            currentSection = sec[1].trim();
+            continue;
+          }
+          if (currentSection && /^achieved\s*=\s*(1|true)/i.test(trimmed)) {
+            unlocked.set(currentSection, Date.now());
+          }
+          const kv = trimmed.match(/^([A-Za-z0-9_.-]+)\s*=\s*(1|true)$/i);
+          if (kv && !/^achieved$/i.test(kv[1]) && !/^unlocktime$/i.test(kv[1])) {
+            unlocked.set(kv[1], Date.now());
+          }
+        }
+      }
+    } catch {}
+  }
+  return unlocked;
+}
+
+async function fetchSteamAchievementsForApp(appId) {
+  const trophies = [];
+  if (!appId) return trophies;
+
+  // 1. Try Steam Community public achievements page (gives exact title, desc, icon & global %)
+  try {
+    const res = await fetchWithTimeout(`https://steamcommunity.com/stats/${appId}/achievements`, 7000);
+    if (res && res.ok) {
+      const html = await res.text();
+      const rowRegex = /<div class="achieveRow[\s\S]*?<img src="([^"]+)"[\s\S]*?<div class="achievePercent">([\d.]+)%<\/div>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<h5[^>]*>([\s\S]*?)<\/h5>/gi;
+      let m;
+      let idx = 0;
+      while ((m = rowRegex.exec(html)) !== null && idx < 60) {
+        const icon = m[1].trim();
+        const pct = parseFloat(m[2]) || 50;
+        const title = m[3].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
+        const desc = m[4].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
+        if (!title) continue;
+        const grade = pct < 10 ? 'gold' : pct < 35 ? 'silver' : 'bronze';
+        trophies.push({
+          id: `steam-${appId}-${idx}`,
+          apiName: title.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+          title,
+          desc: desc || 'Unlock in-game to earn this trophy.',
+          grade,
+          icon,
+          pct
+        });
+        idx++;
+      }
+    }
+  } catch {}
+
+  // 2. Fallback: Steam Web API GlobalAchievementPercentages (gives exact API names + %)
+  if (trophies.length === 0) {
+    try {
+      const res = await fetchWithTimeout(`https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid=${appId}`, 6000);
+      if (res && res.ok) {
+        const json = await res.json();
+        const list = json?.achievementpercentages?.achievements || [];
+        list.slice(0, 50).forEach((item, idx) => {
+          const pct = parseFloat(item.percent) || 50;
+          const cleanName = String(item.name || `Achievement ${idx + 1}`).replace(/[_-]+/g, ' ').trim();
+          const grade = pct < 10 ? 'gold' : pct < 35 ? 'silver' : 'bronze';
+          trophies.push({
+            id: `steam-${appId}-${item.name}`,
+            apiName: item.name,
+            title: cleanName,
+            desc: `${pct.toFixed(1)}% of players unlocked this trophy.`,
+            grade,
+            icon: '',
+            pct
+          });
+        });
+      }
+    } catch {}
+  }
+
+  return trophies;
+}
+
+async function detectGameTrophies(game) {
+  const title = String(game?.title || '').trim();
+  const exePath = String(game?.executable || '').trim();
+  if (!title) return { ok: false, source: 'none', appId: '', trophies: [] };
+
+  // Special real support: Minecraft / TLauncher Advancements
+  if (/\b(minecraft|tlauncher)\b/i.test(title) || /minecraft|tlauncher/i.test(exePath)) {
+    const unlockedMap = readUnlockedFromLocalFiles([], true);
+    const trophies = MINECRAFT_ADVANCEMENTS.map((a) => ({
+      id: `mc-${a.apiName}`,
+      apiName: a.apiName,
+      gameId: game.id,
+      gameTitle: title,
+      title: a.title,
+      desc: a.desc,
+      grade: a.grade,
+      icon: '',
+      pct: a.pct,
+      unlocked: unlockedMap.has(a.apiName),
+      unlockedAt: unlockedMap.get(a.apiName) || null
+    }));
+    return { ok: true, source: 'minecraft-advancements', appId: 'minecraft', trophies, watchPaths: [] };
+  }
+
+  // Detect Steam AppID locally first, then via Steam Store Search
+  let appId = extractLocalSteamAppId(exePath);
+  if (!appId) {
+    try {
+      const steamUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(title)}&l=english&cc=US`;
+      const res = await fetchWithTimeout(steamUrl, 6000);
+      if (res && res.ok) {
+        const json = await res.json();
+        const match = (json?.items || []).find((item) => isReasonableTitleMatch(title, item.name));
+        if (match?.id) appId = String(match.id);
+      }
+    } catch {}
+  }
+
+  if (!appId) {
+    return { ok: false, source: 'none', appId: '', trophies: [], watchPaths: [] };
+  }
+
+  const rawTrophies = await fetchSteamAchievementsForApp(appId);
+  if (!rawTrophies.length) {
+    return { ok: false, source: 'steam-no-achievements', appId, trophies: [], watchPaths: [] };
+  }
+
+  const watchPaths = getLocalAchievementPaths(appId, exePath);
+  const unlockedMap = readUnlockedFromLocalFiles(watchPaths, false);
+
+  const trophies = rawTrophies.map((t) => {
+    const isEarned = unlockedMap.has(t.apiName) || unlockedMap.has(t.title);
+    return {
+      ...t,
+      gameId: game.id,
+      gameTitle: title,
+      unlocked: isEarned,
+      unlockedAt: unlockedMap.get(t.apiName) || unlockedMap.get(t.title) || null
+    };
+  });
+
+  // Add Platinum trophy for 100% completion of real game achievements
+  trophies.push({
+    id: `plat-${appId}`,
+    apiName: '__platinum__',
+    gameId: game.id,
+    gameTitle: title,
+    title: `${title} Platinum`,
+    desc: `Earn every official trophy in ${title}.`,
+    grade: 'platinum',
+    icon: '',
+    pct: 1,
+    unlocked: trophies.length > 0 && trophies.every((x) => x.unlocked),
+    unlockedAt: null
+  });
+
+  return { ok: true, source: 'steam-achievements', appId, trophies, watchPaths };
+}
+
+function showInGameTrophyPopup(trophy) {
+  try {
+    const { screen } = require('electron');
+    const primary = screen.getPrimaryDisplay();
+    const { width } = primary.workAreaSize;
+    if (!trophyHudWindow || trophyHudWindow.isDestroyed()) {
+      trophyHudWindow = new BrowserWindow({
+        width: 370,
+        height: 102,
+        x: Math.max(12, width - 384),
+        y: 18,
+        frame: false,
+        transparent: true,
+        resizable: false,
+        movable: false,
+        focusable: false,
+        skipTaskbar: true,
+        alwaysOnTop: true,
+        show: false,
+        webPreferences: {
+          preload: path.join(__dirname, 'preload.js'),
+          contextIsolation: true,
+          nodeIntegration: false
+        }
+      });
+      trophyHudWindow.setIgnoreMouseEvents(true, { forward: true });
+      trophyHudWindow.setAlwaysOnTop(true, 'screen-saver');
+      trophyHudWindow.loadFile(path.join(__dirname, 'renderer', 'trophy-hud.html'));
+      trophyHudWindow.on('closed', () => { trophyHudWindow = null; });
+    }
+    const payload = { ...trophy, theme: activeOverlayTheme };
+    const deliver = () => {
+      if (!trophyHudWindow || trophyHudWindow.isDestroyed()) return;
+      trophyHudWindow.showInactive();
+      trophyHudWindow.webContents.send('trophy:popup', payload);
+      clearTimeout(trophyHudHideTimer);
+      trophyHudHideTimer = setTimeout(() => {
+        if (trophyHudWindow && !trophyHudWindow.isDestroyed()) trophyHudWindow.hide();
+      }, 5200);
+    };
+    if (trophyHudWindow.webContents.isLoading()) {
+      trophyHudWindow.webContents.once('did-finish-load', deliver);
+    } else {
+      deliver();
+    }
+  } catch {}
+}
+
+function stopTrophyWatch() {
+  if (trophyWatchTimer) {
+    clearInterval(trophyWatchTimer);
+    trophyWatchTimer = null;
+  }
+  activeTrophyContext = null;
+}
+
+function startTrophyWatch(gameContext) {
+  stopTrophyWatch();
+  if (!gameContext || !gameContext.trophies?.length) return;
+  const isMc = gameContext.source === 'minecraft-advancements';
+  const watchPaths = gameContext.watchPaths || getLocalAchievementPaths(gameContext.appId, gameContext.executable);
+  const alreadyKnown = new Set(
+    gameContext.trophies.filter((t) => t.unlocked).map((t) => t.apiName)
+  );
+  activeTrophyContext = { ...gameContext, isMc, watchPaths, alreadyKnown };
+
+  trophyWatchTimer = setInterval(() => {
+    if (!runningGame || !activeTrophyContext) {
+      stopTrophyWatch();
+      return;
+    }
+    const unlockedNow = readUnlockedFromLocalFiles(activeTrophyContext.watchPaths, activeTrophyContext.isMc);
+    for (const t of activeTrophyContext.trophies) {
+      if (t.apiName === '__platinum__' || activeTrophyContext.alreadyKnown.has(t.apiName)) continue;
+      if (unlockedNow.has(t.apiName) || unlockedNow.has(t.title)) {
+        activeTrophyContext.alreadyKnown.add(t.apiName);
+        t.unlocked = true;
+        t.unlockedAt = Date.now();
+        showInGameTrophyPopup(t);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('trophy:unlocked', t);
+        }
+      }
+    }
+  }, 2500);
+}
 
 function createVcHudWindow() {
   if (vcHudWindow && !vcHudWindow.isDestroyed()) return vcHudWindow;
@@ -1802,6 +2173,16 @@ ipcMain.handle('vc:updateState', (_event, vcState) => {
 });
 
 ipcMain.handle('vc:getState', () => activeVcState);
+
+ipcMain.handle('trophies:detect', async (_event, game) => detectGameTrophies(game));
+ipcMain.handle('trophies:watchGame', (_event, gameContext) => {
+  startTrophyWatch(gameContext);
+  return true;
+});
+ipcMain.handle('trophies:showPopup', (_event, trophy) => {
+  showInGameTrophyPopup(trophy);
+  return true;
+});
 
 ipcMain.handle('manual:fetch', async (_event, title) => fetchOfficialManualPages(title));
 ipcMain.handle('trailer:fetch', async () => null);

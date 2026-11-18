@@ -43,6 +43,19 @@ contextBridge.exposeInMainWorld('launcherAPI', {
     ipcRenderer.on('game:runningChanged', handler);
     return () => ipcRenderer.removeListener('game:runningChanged', handler);
   },
+  detectGameTrophies: (game) => ipcRenderer.invoke('trophies:detect', game),
+  watchGameTrophies: (ctx) => ipcRenderer.invoke('trophies:watchGame', ctx),
+  showTrophyPopup: (trophy) => ipcRenderer.invoke('trophies:showPopup', trophy),
+  onTrophyUnlocked: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('trophy:unlocked', handler);
+    return () => ipcRenderer.removeListener('trophy:unlocked', handler);
+  },
+  onTrophyPopup: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('trophy:popup', handler);
+    return () => ipcRenderer.removeListener('trophy:popup', handler);
+  },
   fetchOfficialManual: (title) => ipcRenderer.invoke('manual:fetch', title),
   fetchTrailer: (payload) => ipcRenderer.invoke('trailer:fetch', payload),
   importArtworkFile: (filePath) => ipcRenderer.invoke('artwork:importFile', filePath),

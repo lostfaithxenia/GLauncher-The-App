@@ -490,22 +490,58 @@ const TROPHY_GRADES = {
 };
 
 function getGameTrophyTemplates(game) {
-  const t = game?.title || 'Game';
-  return [
-    { id: `ach-${game.id}-unwrap`, gameId: game.id, gameTitle: t, title: `Collector's Edition: ${t}`, desc: `Added and unwrapped ${t} in your library.`, grade: 'bronze' },
-    { id: `ach-${game.id}-boot`, gameId: game.id, gameTitle: t, title: `First Boot: ${t}`, desc: `Launched ${t} from the physical media stage.`, grade: 'silver' },
-    { id: `ach-${game.id}-manual`, gameId: game.id, gameTitle: t, title: `Lore & Manual Scholar`, desc: `Opened and read the instruction booklet for ${t}.`, grade: 'bronze' },
-    { id: `ach-${game.id}-trailer`, gameId: game.id, gameTitle: t, title: `Cinema & Trailer Buff`, desc: `Watched the trailer or XMB hover preview for ${t}.`, grade: 'silver' },
-    { id: `ach-${game.id}-veteran`, gameId: game.id, gameTitle: t, title: `Dedicated Master: ${t}`, desc: `Played ${t} 3+ times or unlocked all core milestones.`, grade: 'gold' },
-    { id: `ach-${game.id}-plat`, gameId: game.id, gameTitle: t, title: `Platinum Completionist: ${t}`, desc: `Earned every trophy for ${t}!`, grade: 'platinum' }
-  ];
+  if (!game || !Array.isArray(game?.trophySupport?.trophies)) return [];
+  return game.trophySupport.trophies;
 }
 
-const GLOBAL_TROPHIES = [
-  { id: 'global-xmb', gameId: 'system', gameTitle: 'PS3 System 4.93', title: 'XrossMediaBar Pioneer', desc: 'Experienced the authentic PS3 Firmware 4.93 & MaXMB theme.', grade: 'silver' },
-  { id: 'global-profile', gameId: 'system', gameTitle: 'Profile & Super Roles', title: 'Identity Architect', desc: 'Customized your profile super roles, banner, or glowing VFX.', grade: 'gold' },
-  { id: 'global-tutorial', gameId: 'system', gameTitle: 'Onboarding', title: 'Ready Player One', desc: 'Completed the interactive launcher tutorial.', grade: 'bronze' }
-];
+// Trophies are strictly exclusive to the user's real games (no global/launcher trophies on fresh start)
+const GLOBAL_TROPHIES = [];
+
+async function syncGameTrophySupport(game, silent = true) {
+  if (!game?.title || !api.detectGameTrophies) return null;
+  try {
+    const res = await api.detectGameTrophies({
+      id: game.id,
+      title: game.title,
+      executable: game.executable || ''
+    });
+    if (res?.ok && Array.isArray(res.trophies) && res.trophies.length > 0) {
+      game.trophySupport = {
+        appId: res.appId || '',
+        source: res.source || 'steam-achievements',
+        watchPaths: res.watchPaths || [],
+        trophies: res.trophies
+      };
+      // Sync already-unlocked local achievements quietly
+      const prof = activeProfile();
+      const list = getProfileAchievements(prof);
+      for (const t of res.trophies) {
+        if (t.unlocked && !list.some((a) => a.id === t.id)) {
+          list.unshift({
+            id: t.id,
+            gameId: game.id,
+            gameTitle: game.title,
+            title: t.title,
+            desc: t.desc,
+            grade: t.grade || 'bronze',
+            icon: t.icon || '',
+            unlockedAt: t.unlockedAt ? new Date(t.unlockedAt).toISOString() : new Date().toISOString()
+          });
+        }
+      }
+      await persist();
+      renderProfileCardAndHud();
+      if (state.drawerOpen && state.activeTab === 'trophies') renderTrophiesTab();
+      if (!silent) {
+        showToast(`Connected ${res.trophies.length} official trophies for "${game.title}"!`);
+      }
+      return res;
+    } else if (!silent) {
+      showToast(`No official trophy support found for "${game.title}"`);
+    }
+  } catch {}
+  return null;
+}
 
 function getProfileAchievements(profile = activeProfile()) {
   if (!Array.isArray(profile.achievements)) profile.achievements = [];
@@ -889,6 +925,18 @@ function renderProfileCardAndHud() {
     els.profileCardPopover.style.background = `linear-gradient(165deg, ${pPrimary}ee 0%, #090c16f7 68%)`;
     els.profileCardPopover.style.borderColor = `${pAccent}66`;
   }
+  const popEffectLayer = document.getElementById('profileCardEffectLayer');
+  if (popEffectLayer) {
+    popEffectLayer.className = `discord-effect-layer effect-${profile.profileEffect || 'none'}`;
+  }
+  if (els.profileCardAvatarWrap) {
+    const deco = profile.avatarDecoration || 'none';
+    els.profileCardAvatarWrap.classList.remove('deco-none', 'deco-headphones', 'deco-halo', 'deco-sakura', 'deco-flame', 'deco-crown', 'deco-void', 'deco-crystal', 'deco-emerald');
+    els.profileCardAvatarWrap.classList.add(`deco-${deco}`);
+  }
+  if (typeof renderDiscordLivePreview === 'function') {
+    renderDiscordLivePreview();
+  }
   if (els.profileBannerEl) {
     const b = profile.banner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)';
     els.profileBannerEl.style.background = b;
@@ -992,8 +1040,8 @@ function renderProfileCardAndHud() {
     if (els.hudStatPlays) els.hudStatPlays.textContent = String(selected.playCount || 0);
     const gameTemplates = getGameTrophyTemplates(selected);
     const unlockedForGame = getProfileAchievements(profile).filter((a) => a.gameId === selected.id).length;
-    const pct = Math.min(100, Math.round((unlockedForGame / gameTemplates.length) * 100));
-    if (els.hudStatTrophies) els.hudStatTrophies.textContent = `${unlockedForGame} / ${gameTemplates.length}`;
+    const pct = gameTemplates.length > 0 ? Math.min(100, Math.round((unlockedForGame / gameTemplates.length) * 100)) : 0;
+    if (els.hudStatTrophies) els.hudStatTrophies.textContent = gameTemplates.length > 0 ? `${unlockedForGame} / ${gameTemplates.length}` : '0';
     if (els.hudStatMedia) els.hudStatMedia.textContent = settings.viewMode === 'case' ? '3D CASE' : '3D DISC';
     if (els.hudTrophyPct) els.hudTrophyPct.textContent = `${pct}%`;
     if (els.hudTrophyFill) els.hudTrophyFill.style.width = `${pct}%`;
@@ -1237,32 +1285,32 @@ function renderTrophiesTab() {
   if (els.achievementsListEl) {
     els.achievementsListEl.innerHTML = '';
     const unlockedIds = new Set(getProfileAchievements(profile).map((a) => a.id));
-    const selectedGame = activeGames().find((g) => g.id === state.selectedId);
-    const allTemplates = [
-      ...(selectedGame ? getGameTrophyTemplates(selectedGame) : []),
-      ...GLOBAL_TROPHIES
-    ];
+    const games = activeGames();
+    const selectedGame = games.find((g) => g.id === state.selectedId) || games[0] || null;
+    const allTemplates = selectedGame ? getGameTrophyTemplates(selectedGame) : [];
 
-    allTemplates.forEach((t) => {
-      const isUnlocked = unlockedIds.has(t.id);
-      const row = document.createElement('div');
-      row.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
-      const gradeInfo = TROPHY_GRADES[t.grade] || TROPHY_GRADES.bronze;
-      row.innerHTML = `
-        <img class="achievement-icon" src="${gradeInfo.icon}" alt="" />
-        <div class="achievement-info">
-          <div class="achievement-title">${t.title}</div>
-          <div class="achievement-desc">${t.gameTitle} • ${t.desc}</div>
-        </div>
-        <span class="achievement-badge">${isUnlocked ? 'UNLOCKED' : gradeInfo.label.toUpperCase()}</span>
-      `;
-      if (!isUnlocked) {
-        row.style.cursor = 'pointer';
-        row.title = 'Click to unlock trophy';
-        row.addEventListener('click', () => unlockAchievement(t, false));
-      }
-      els.achievementsListEl.appendChild(row);
-    });
+    if (!games.length) {
+      els.achievementsListEl.innerHTML = `<p class="hint-text">No trophies yet — add games to your library to automatically detect their official Steam / Minecraft trophy support!</p>`;
+    } else if (!allTemplates.length) {
+      els.achievementsListEl.innerHTML = `<p class="hint-text">No trophy support connected for <strong>${selectedGame.title}</strong> yet. Click <strong>↻ Detect Trophy Support</strong> above to scan.</p>`;
+    } else {
+      allTemplates.forEach((t) => {
+        const isUnlocked = unlockedIds.has(t.id) || Boolean(t.unlocked);
+        const row = document.createElement('div');
+        row.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+        const gradeInfo = TROPHY_GRADES[t.grade] || TROPHY_GRADES.bronze;
+        const pctTag = typeof t.pct === 'number' ? ` • ${t.pct.toFixed(1)}% rarity` : '';
+        row.innerHTML = `
+          <img class="achievement-icon" src="${t.icon || gradeInfo.icon}" alt="" />
+          <div class="achievement-info">
+            <div class="achievement-title">${t.title}</div>
+            <div class="achievement-desc">${t.gameTitle || selectedGame.title} • ${t.desc}${pctTag}</div>
+          </div>
+          <span class="achievement-badge">${isUnlocked ? 'UNLOCKED' : gradeInfo.label.toUpperCase()}</span>
+        `;
+        els.achievementsListEl.appendChild(row);
+      });
+    }
   }
 
   if (els.notificationHistoryList) {
@@ -4045,6 +4093,7 @@ function bindEvents() {
 
     onStage?.(100, 'Installed!');
     fetchManualInBackground(newGame);
+    syncGameTrophySupport(newGame, false);
     if (timedOut || !meta?.ok) {
       retryMetadataInBackground(newGame);
     }
@@ -4558,6 +4607,7 @@ function bindEvents() {
       };
       games.unshift(newGame);
       state.selectedId = newGame.id;
+      syncGameTrophySupport(newGame, false);
     }
 
     state.creatingNewGame = false;
@@ -5686,6 +5736,7 @@ async function init() {
   bindEvents();
   initSpotlightSurfaces();
   initSocialAndVc();
+  initDiscordProfileStudio();
   render();
 
   // App-wide non-blocking startup splash reveal
@@ -5927,4 +5978,311 @@ function initSocialAndVc() {
     renderVcBanner();
     showToast('Left voice call');
   });
+}
+
+// =========================================================
+// DISCORD-STYLE PROFILE STUDIO (SWATCHES, EFFECTS, DECOS)
+// & REAL PER-GAME TROPHY WATCHER
+// =========================================================
+const DISCORD_COLOR_SWATCHES = [
+  { id: 'obsidian', name: 'Obsidian Midnight', primary: '#1e1b4b', accent: '#38bdf8', grad: 'linear-gradient(135deg, #0f172a, #38bdf8)' },
+  { id: 'mint', name: 'Mint Breeze', primary: '#134e4a', accent: '#6ee7b7', grad: 'linear-gradient(135deg, #bbf7d0, #34d399)' },
+  { id: 'peach', name: 'Peach Sunset', primary: '#7c2d12', accent: '#fdba74', grad: 'linear-gradient(135deg, #fed7aa, #fb923c)' },
+  { id: 'lavender', name: 'Lavender Mist', primary: '#312e81', accent: '#c4b5fd', grad: 'linear-gradient(135deg, #c7d2fe, #a78bfa)' },
+  { id: 'sakura', name: 'Sakura Bloom', primary: '#831843', accent: '#f9a8d4', grad: 'linear-gradient(135deg, #fbcfe8, #f472b6)' },
+  { id: 'dusk', name: 'Dusk Rose', primary: '#581c87', accent: '#e879f9', grad: 'linear-gradient(135deg, #e9d5ff, #c084fc)' },
+  { id: 'cyber', name: 'Cyber Neon', primary: '#1e1b4b', accent: '#22d3ee', grad: 'linear-gradient(135deg, #4f46e5, #06b6d4)' },
+  { id: 'crimson', name: 'Crimson Ember', primary: '#450a0a', accent: '#f87171', grad: 'linear-gradient(135deg, #7f1d1d, #ef4444)' },
+  { id: 'forest', name: 'Forest Moss', primary: '#14532d', accent: '#4ade80', grad: 'linear-gradient(135deg, #166534, #84cc16)' },
+  { id: 'royal', name: 'Royal Violet', primary: '#2e1065', accent: '#a855f7', grad: 'linear-gradient(135deg, #3b0764, #a855f7)' },
+  { id: 'solar', name: 'Solar Gold', primary: '#451a03', accent: '#facc15', grad: 'linear-gradient(135deg, #92400e, #facc15)' },
+  { id: 'synth', name: 'Synthwave', primary: '#4a044e', accent: '#ec4899', grad: 'linear-gradient(135deg, #7e22ce, #ec4899)' },
+  { id: 'arctic', name: 'Arctic Ice', primary: '#0c4a6e', accent: '#7dd3fc', grad: 'linear-gradient(135deg, #bae6fd, #0284c7)' },
+  { id: 'emerald', name: 'Emerald Abyss', primary: '#064e3b', accent: '#2dd4bf', grad: 'linear-gradient(135deg, #0f766e, #10b981)' },
+  { id: 'amber', name: 'Amber Dusk', primary: '#431407', accent: '#fb923c', grad: 'linear-gradient(135deg, #9a3412, #f59e0b)' },
+  { id: 'slate', name: 'Carbon Slate', primary: '#1e293b', accent: '#94a3b8', grad: 'linear-gradient(135deg, #334155, #94a3b8)' }
+];
+
+const DISCORD_PROFILE_EFFECTS = [
+  { id: 'none', name: 'None', emoji: '🚫', desc: 'Clean profile card without an animated overlay.', bg: '#111827' },
+  { id: 'hydro', name: 'Hydro Blast', emoji: '💧', desc: 'Glowing neon blue water splashes floating over your profile card.', bg: 'linear-gradient(135deg, #0284c7, #38bdf8)' },
+  { id: 'toxic', name: 'Toxic Mist', emoji: '💀', desc: 'Radioactive emerald glow and drifting cyber mist.', bg: 'linear-gradient(135deg, #15803d, #4ade80)' },
+  { id: 'cosmic', name: 'Cosmic Portal', emoji: '🌌', desc: 'Swirling deep-space violet nebula & magenta energy.', bg: 'linear-gradient(135deg, #581c87, #ec4899)' },
+  { id: 'sakura', name: 'Sakura Petals', emoji: '🌸', desc: 'Soft cherry blossom petals drifting across your profile.', bg: 'linear-gradient(135deg, #9d174d, #fbcfe8)' },
+  { id: 'ember', name: 'Ember Shatter', emoji: '🔥', desc: 'Glowing magma cracks & rising fiery sparks.', bg: 'linear-gradient(135deg, #7c2d12, #f97316)' },
+  { id: 'hearts', name: 'Neon Hearts', emoji: '💖', desc: 'Radiant synthwave pink & violet glow.', bg: 'linear-gradient(135deg, #86198f, #f472b6)' },
+  { id: 'aurora', name: 'Aurora Waves', emoji: '✨', desc: 'Flowing northern lights teal & indigo shimmer.', bg: 'linear-gradient(135deg, #0f766e, #6366f1)' },
+  { id: 'lightning', name: 'Electric Storm', emoji: '⚡', desc: 'High-voltage cyan & indigo lightning arcs.', bg: 'linear-gradient(135deg, #1d4ed8, #7dd3fc)' },
+  { id: 'crystal', name: 'Prismatic Crystal', emoji: '💎', desc: 'Holographic wireframe crystal & starlight sparkles.', bg: 'linear-gradient(135deg, #a16207, #ec4899)' },
+  { id: 'comet', name: 'Shooting Star', emoji: '☄️', desc: 'Streaking emerald & cyan meteor trails.', bg: 'linear-gradient(135deg, #065f46, #38bdf8)' },
+  { id: 'gold', name: 'Platinum Aura', emoji: '👑', desc: 'Golden trophy shimmer across your profile.', bg: 'linear-gradient(135deg, #854d0e, #facc15)' }
+];
+
+const DISCORD_AVATAR_DECOS = [
+  { id: 'none', name: 'None', emoji: '⭕' },
+  { id: 'headphones', name: 'Headphones', emoji: '🎧' },
+  { id: 'halo', name: 'Neon Halo', emoji: '😇' },
+  { id: 'sakura', name: 'Sakura Ring', emoji: '🌸' },
+  { id: 'flame', name: 'Flame Ring', emoji: '🔥' },
+  { id: 'crown', name: 'Royal Crown', emoji: '👑' },
+  { id: 'void', name: 'Void Pulse', emoji: '🌀' },
+  { id: 'crystal', name: 'Prism Aura', emoji: '💎' },
+  { id: 'emerald', name: 'Emerald Ring', emoji: '💚' }
+];
+
+let studioStartTs = Date.now();
+let studioElapsedTimer = null;
+
+function renderDiscordLivePreview() {
+  const card = document.getElementById('discordLiveCard');
+  if (!card) return;
+  const profile = activeProfile();
+  const primary = profile.profilePrimaryColor || '#1e1b4b';
+  const accent = profile.profileAccentColor || profile.color || '#38bdf8';
+  const effectId = profile.profileEffect || 'none';
+  const decoId = profile.avatarDecoration || 'none';
+
+  card.style.background = `linear-gradient(168deg, ${primary} 0%, #090d18 78%)`;
+  card.style.borderColor = `${accent}99`;
+
+  const fxLayer = document.getElementById('discordLiveEffectLayer');
+  if (fxLayer) fxLayer.className = `discord-effect-layer effect-${effectId}`;
+
+  const banner = document.getElementById('discordLiveBanner');
+  if (banner) {
+    const b = profile.banner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)';
+    banner.style.background = b;
+    banner.style.backgroundSize = b.startsWith('url') ? 'cover' : '200% 200%';
+    banner.style.backgroundPosition = 'center';
+  }
+
+  const avWrap = document.getElementById('discordLiveAvatarWrap');
+  if (avWrap) avWrap.className = `discord-live-avatar-wrap deco-${decoId}`;
+
+  const avImg = document.getElementById('discordLiveAvatarImg');
+  if (avImg) avImg.src = profile.avatar || './assets/maxmb/icons/avatars/firmware/000.png';
+
+  const statusDot = document.getElementById('discordLiveStatusDot');
+  if (statusDot) statusDot.className = `live-status-dot status-${profile.status || 'online'}`;
+
+  const thoughtText = document.getElementById('discordLiveThoughtText');
+  const thoughtBubble = document.getElementById('discordLiveThoughtBubble');
+  const cs = (profile.customStatus || '').trim();
+  if (thoughtText) thoughtText.textContent = cs || 'Just browsing GLauncher…';
+  if (thoughtBubble) thoughtBubble.classList.toggle('hidden', !cs && false);
+
+  const nameEl = document.getElementById('discordLiveName');
+  if (nameEl) nameEl.textContent = profile.name || 'Player 1';
+
+  const subEl = document.getElementById('discordLiveSubHandle');
+  if (subEl) {
+    const h = profile.handle || '@player1';
+    subEl.textContent = profile.pronouns ? `${h} • ${profile.pronouns}` : h;
+  }
+
+  const bioEl = document.getElementById('discordLiveBio');
+  if (bioEl) bioEl.textContent = profile.bio || 'No bio set yet.';
+
+  const rolesEl = document.getElementById('discordLiveRoles');
+  if (rolesEl) {
+    rolesEl.innerHTML = '';
+    (profile.roles || []).forEach((r) => {
+      const pill = document.createElement('span');
+      pill.className = 'dc-role-pill';
+      pill.style.borderColor = `${r.color || accent}88`;
+      pill.innerHTML = `<span class="dc-role-dot" style="background:${r.color || accent}"></span>${r.name}`;
+      rolesEl.appendChild(pill);
+    });
+  }
+
+  const sinceEl = document.getElementById('discordLiveMemberSince');
+  if (sinceEl) {
+    const dt = profile.createdAt ? new Date(profile.createdAt) : new Date();
+    sinceEl.textContent = `💿 ${dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }
+
+  const exBtn = document.getElementById('discordLiveExampleBtn');
+  if (exBtn) {
+    exBtn.style.background = accent;
+    exBtn.textContent = currentRunningGame?.title ? `Playing ${currentRunningGame.title}` : 'Profile Active';
+  }
+
+  const fxMeta = DISCORD_PROFILE_EFFECTS.find((e) => e.id === effectId) || DISCORD_PROFILE_EFFECTS[0];
+  const infoTitle = document.getElementById('discordEffectInfoTitle');
+  const infoDesc = document.getElementById('discordEffectInfoDesc');
+  if (infoTitle) infoTitle.textContent = fxMeta.name;
+  if (infoDesc) infoDesc.textContent = fxMeta.desc;
+
+  // Sync input values when switching profiles
+  const dispInput = document.getElementById('profileDisplayNameInput');
+  if (dispInput && document.activeElement !== dispInput) dispInput.value = profile.name || '';
+  const pronInput = document.getElementById('profilePronounsInput');
+  if (pronInput && document.activeElement !== pronInput) pronInput.value = profile.pronouns || '';
+  if (els.profilePrimaryColorInput) els.profilePrimaryColorInput.value = primary;
+  if (els.profileAccentColorInput) els.profileAccentColorInput.value = accent;
+}
+
+function initDiscordProfileStudio() {
+  // 1. Render Circular Color Swatches
+  const swatchGrid = document.getElementById('profileColorSwatchGrid');
+  if (swatchGrid) {
+    swatchGrid.innerHTML = '';
+    DISCORD_COLOR_SWATCHES.forEach((sw) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `color-swatch-orb${activeProfile().colorSwatch === sw.id ? ' selected' : ''}`;
+      btn.style.background = sw.grad;
+      btn.title = sw.name;
+      btn.dataset.swatchId = sw.id;
+      btn.addEventListener('click', async () => {
+        const p = activeProfile();
+        p.colorSwatch = sw.id;
+        p.profilePrimaryColor = sw.primary;
+        p.profileAccentColor = sw.accent;
+        p.color = sw.accent;
+        swatchGrid.querySelectorAll('.color-swatch-orb').forEach((el) => el.classList.toggle('selected', el.dataset.swatchId === sw.id));
+        await persist();
+        render();
+        showToast(`Applied ${sw.name} profile theme`);
+      });
+      swatchGrid.appendChild(btn);
+    });
+  }
+
+  // 2. Render Profile Effects Picker
+  const fxGrid = document.getElementById('profileEffectsGrid');
+  if (fxGrid) {
+    fxGrid.innerHTML = '';
+    DISCORD_PROFILE_EFFECTS.forEach((fx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `effect-tile${(activeProfile().profileEffect || 'none') === fx.id ? ' selected' : ''}`;
+      btn.style.background = fx.bg;
+      btn.dataset.fxId = fx.id;
+      btn.innerHTML = `<span class="effect-tile-emoji">${fx.emoji}</span><span class="effect-tile-label">${fx.name}</span>`;
+      btn.addEventListener('click', async () => {
+        activeProfile().profileEffect = fx.id;
+        fxGrid.querySelectorAll('.effect-tile').forEach((el) => el.classList.toggle('selected', el.dataset.fxId === fx.id));
+        await persist();
+        render();
+        showToast(`Profile Effect: ${fx.name}`);
+      });
+      fxGrid.appendChild(btn);
+    });
+  }
+
+  // 3. Render Avatar Decorations Picker
+  const decoGrid = document.getElementById('avatarDecoGrid');
+  if (decoGrid) {
+    decoGrid.innerHTML = '';
+    DISCORD_AVATAR_DECOS.forEach((dc) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `deco-tile${(activeProfile().avatarDecoration || 'none') === dc.id ? ' selected' : ''}`;
+      btn.dataset.decoId = dc.id;
+      btn.innerHTML = `<span class="deco-tile-emoji">${dc.emoji}</span><span class="deco-tile-label">${dc.name}</span>`;
+      btn.addEventListener('click', async () => {
+        activeProfile().avatarDecoration = dc.id;
+        decoGrid.querySelectorAll('.deco-tile').forEach((el) => el.classList.toggle('selected', el.dataset.decoId === dc.id));
+        await persist();
+        render();
+        showToast(`Avatar Decoration: ${dc.name}`);
+      });
+      decoGrid.appendChild(btn);
+    });
+  }
+
+  // 4. Display Name & Pronouns live inputs
+  const dispInput = document.getElementById('profileDisplayNameInput');
+  dispInput?.addEventListener('input', () => {
+    const v = dispInput.value.trim();
+    if (v) {
+      activeProfile().name = v.slice(0, 28);
+      renderProfileCardAndHud();
+    }
+  });
+  dispInput?.addEventListener('change', async () => {
+    await persist();
+    render();
+  });
+
+  const pronInput = document.getElementById('profilePronounsInput');
+  pronInput?.addEventListener('input', () => {
+    activeProfile().pronouns = pronInput.value.trim().slice(0, 24);
+    renderDiscordLivePreview();
+  });
+  pronInput?.addEventListener('change', async () => {
+    await persist();
+  });
+
+  // Live elapsed timer inside preview card
+  if (!studioElapsedTimer) {
+    studioStartTs = Date.now();
+    studioElapsedTimer = setInterval(() => {
+      const el = document.getElementById('discordLiveElapsed');
+      if (!el) return;
+      const secs = Math.floor((Date.now() - studioStartTs) / 1000);
+      const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+      const ss = String(secs % 60).padStart(2, '0');
+      el.textContent = `${mm}:${ss} elapsed`;
+    }, 1000);
+  }
+
+  // 5. Real Per-Game Trophy Support Scan button & Live Unlock Listener
+  const btnScanTrophies = document.getElementById('btnScanGameTrophies');
+  btnScanTrophies?.addEventListener('click', async () => {
+    const games = activeGames();
+    const selected = games.find((g) => g.id === state.selectedId) || games[0];
+    if (!selected) {
+      showToast('Add a game first to detect its trophy support!');
+      return;
+    }
+    btnScanTrophies.disabled = true;
+    btnScanTrophies.textContent = 'Scanning…';
+    await syncGameTrophySupport(selected, false);
+    btnScanTrophies.disabled = false;
+    btnScanTrophies.textContent = '↻ Detect Trophy Support';
+  });
+
+  api.onTrophyUnlocked?.(async (trophy) => {
+    if (!trophy?.id) return;
+    await unlockAchievement(trophy, false);
+    // Also check if all real trophies for this game are unlocked -> award Platinum!
+    const game = activeGames().find((g) => g.id === trophy.gameId);
+    if (game?.trophySupport?.trophies) {
+      const tObj = game.trophySupport.trophies.find((x) => x.id === trophy.id);
+      if (tObj) tObj.unlocked = true;
+      const nonPlat = game.trophySupport.trophies.filter((x) => x.grade !== 'platinum');
+      const plat = game.trophySupport.trophies.find((x) => x.grade === 'platinum');
+      const unlockedIds = new Set(getProfileAchievements(activeProfile()).map((a) => a.id));
+      if (plat && nonPlat.length > 0 && nonPlat.every((x) => unlockedIds.has(x.id)) && !unlockedIds.has(plat.id)) {
+        plat.unlocked = true;
+        api.showTrophyPopup?.(plat);
+        await unlockAchievement(plat, false);
+      }
+    }
+  });
+
+  // Start live trophy watcher whenever a game starts running!
+  api.onRunningGameChange?.(async (rg) => {
+    if (!rg?.title) return;
+    const game = activeGames().find((g) => g.title === rg.title || (g.executable && g.executable === rg.target));
+    if (!game) return;
+    if (!game.trophySupport?.trophies?.length) {
+      await syncGameTrophySupport(game, true);
+    }
+    if (game.trophySupport?.trophies?.length) {
+      api.watchGameTrophies?.({
+        gameId: game.id,
+        title: game.title,
+        executable: game.executable || '',
+        appId: game.trophySupport.appId || '',
+        source: game.trophySupport.source || 'steam-achievements',
+        watchPaths: game.trophySupport.watchPaths || [],
+        trophies: game.trophySupport.trophies
+      });
+    }
+  });
+
+  renderDiscordLivePreview();
 }

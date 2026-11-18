@@ -4583,3 +4583,514 @@ body.theme-xmb .whatsnew-section-title {
   accent-color: var(--accent, #38bdf8);
   cursor: pointer;
 }
+
+/* =========================================================
+   DISCORD-STYLE PROFILE STUDIO, COLOR SWATCHES & EFFECTS
+   ========================================================= */
+.discord-studio-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 22px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .discord-studio-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.discord-studio-preview-col {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-label-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.discord-live-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid rgba(56, 189, 248, 0.45);
+  background: linear-gradient(170deg, #1e1b4b 0%, #0b1020 75%);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.65);
+  color: #f8fafc;
+}
+
+.discord-live-banner {
+  position: relative;
+  height: 108px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+.discord-edit-pill {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e2e8f0;
+  backdrop-filter: blur(8px);
+}
+
+.discord-live-header-row {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 0 16px;
+  margin-top: -42px;
+  z-index: 2;
+}
+
+.discord-live-avatar-wrap {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  padding: 4px;
+  background: #0b1020;
+  flex-shrink: 0;
+}
+
+.discord-live-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.discord-thought-bubble {
+  position: relative;
+  max-width: 196px;
+  padding: 7px 12px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-size: 11.5px;
+  color: #e2e8f0;
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+
+.discord-thought-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  bottom: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.discord-live-body {
+  position: relative;
+  z-index: 2;
+  padding: 10px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.discord-live-badges-row {
+  display: flex;
+  gap: 5px;
+  align-self: flex-end;
+  margin-top: -18px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(7, 10, 18, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dc-badge {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.discord-live-name {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.discord-live-subhandle {
+  font-size: 12.5px;
+  color: rgba(241, 245, 249, 0.78);
+  margin-top: -7px;
+}
+
+.discord-live-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.discord-live-sec-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.72);
+  text-transform: uppercase;
+}
+
+.discord-live-bio {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: rgba(241, 245, 249, 0.9);
+}
+
+.discord-live-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.dc-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(10, 14, 24, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f1f5f9;
+}
+
+.dc-role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.discord-live-activity {
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(7, 10, 18, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.discord-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.discord-activity-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.discord-activity-title {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.discord-activity-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.discord-live-since {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.discord-example-btn {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent, #38bdf8);
+  color: #06101c;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: default;
+  margin-top: 2px;
+}
+
+.discord-effect-info-box {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(168, 85, 247, 0.42);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+/* Circular Discord Appearance Color Swatches */
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 34px);
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.color-swatch-orb {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.color-swatch-orb:hover {
+  transform: scale(1.12);
+}
+
+.color-swatch-orb.selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #38bdf8;
+}
+
+.color-swatch-orb.selected::after {
+  content: '✓';
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #38bdf8;
+  color: #04101c;
+  font-size: 10px;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+}
+
+/* Profile Effects & Avatar Decoration Grids */
+.effect-picker-grid,
+.deco-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.effect-tile,
+.deco-tile {
+  position: relative;
+  height: 68px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.72);
+  color: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.effect-tile:hover,
+.deco-tile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+.effect-tile.selected,
+.deco-tile.selected {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+}
+
+.effect-tile-emoji,
+.deco-tile-emoji {
+  font-size: 20px;
+  z-index: 1;
+}
+
+.effect-tile-label,
+.deco-tile-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  z-index: 1;
+  text-align: center;
+  padding: 0 4px;
+}
+
+/* Animated Profile Card Overlays (11 Effects) */
+.discord-effect-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.72;
+  mix-blend-mode: screen;
+}
+
+.discord-effect-layer.effect-none {
+  display: none;
+}
+
+.discord-effect-layer.effect-hydro {
+  background:
+    radial-gradient(circle at 20% 25%, rgba(56, 189, 248, 0.75) 0%, transparent 24%),
+    radial-gradient(circle at 80% 65%, rgba(14, 165, 233, 0.7) 0%, transparent 26%),
+    radial-gradient(circle at 38% 72%, rgba(125, 211, 252, 0.65) 0%, transparent 18%),
+    radial-gradient(circle at 72% 18%, rgba(56, 189, 248, 0.5) 0%, transparent 16%);
+  animation: fxFloatDrift 4.5s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-toxic {
+  background:
+    radial-gradient(circle at 50% 22%, rgba(34, 197, 94, 0.68) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, rgba(132, 204, 22, 0.52) 0%, transparent 34%),
+    radial-gradient(circle at 84% 72%, rgba(16, 185, 129, 0.45) 0%, transparent 28%);
+  animation: fxPulseGlow 3.2s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-cosmic {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(168, 85, 247, 0.72) 0%, transparent 45%),
+    radial-gradient(circle at 18% 76%, rgba(236, 72, 153, 0.55) 0%, transparent 36%),
+    radial-gradient(circle at 86% 24%, rgba(99, 102, 241, 0.6) 0%, transparent 30%);
+  animation: fxFloatDrift 5.2s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-sakura {
+  background:
+    radial-gradient(ellipse 14px 8px at 18% 22%, rgba(251, 207, 232, 0.85), transparent 70%),
+    radial-gradient(ellipse 12px 7px at 78% 36%, rgba(244, 114, 182, 0.75), transparent 70%),
+    radial-gradient(ellipse 16px 9px at 42% 68%, rgba(251, 207, 232, 0.8), transparent 70%),
+    radial-gradient(ellipse 10px 6px at 84% 82%, rgba(249, 168, 212, 0.75), transparent 70%),
+    radial-gradient(circle at 50% 10%, rgba(244, 114, 182, 0.35), transparent 55%);
+  animation: fxFloatDrift 5s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-ember {
+  background:
+    linear-gradient(125deg, transparent 38%, rgba(249, 115, 22, 0.55) 48%, rgba(250, 204, 21, 0.7) 50%, transparent 56%),
+    radial-gradient(circle at 25% 85%, rgba(239, 68, 68, 0.6), transparent 36%),
+    radial-gradient(circle at 78% 75%, rgba(245, 158, 11, 0.55), transparent 30%);
+  animation: fxPulseGlow 2.8s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-hearts {
+  background:
+    radial-gradient(circle at 24% 34%, rgba(236, 72, 153, 0.72), transparent 28%),
+    radial-gradient(circle at 76% 42%, rgba(192, 132, 252, 0.65), transparent 30%),
+    radial-gradient(circle at 52% 76%, rgba(244, 114, 182, 0.6), transparent 32%);
+  animation: fxPulseGlow 3.6s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-aurora {
+  background:
+    linear-gradient(150deg, rgba(45, 212, 191, 0.55) 0%, rgba(56, 189, 248, 0.45) 38%, rgba(168, 85, 247, 0.5) 72%, transparent 100%);
+  animation: fxFloatDrift 6s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-lightning {
+  background:
+    linear-gradient(112deg, transparent 44%, rgba(125, 211, 252, 0.85) 48%, #ffffff 50%, rgba(99, 102, 241, 0.75) 52%, transparent 56%),
+    radial-gradient(circle at 50% 25%, rgba(56, 189, 248, 0.5), transparent 45%);
+  animation: fxPulseGlow 1.9s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-crystal {
+  background-image:
+    linear-gradient(30deg, rgba(250, 204, 21, 0.14) 1px, transparent 1px),
+    linear-gradient(150deg, rgba(236, 72, 153, 0.16) 1px, transparent 1px),
+    radial-gradient(circle at 50% 45%, rgba(250, 204, 21, 0.42), rgba(236, 72, 153, 0.25) 40%, transparent 72%);
+  background-size: 28px 28px, 28px 28px, 100% 100%;
+  animation: fxPulseGlow 4.2s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-comet {
+  background:
+    linear-gradient(135deg, transparent 22%, rgba(52, 211, 153, 0.8) 46%, #ffffff 50%, transparent 54%),
+    radial-gradient(circle at 80% 22%, rgba(56, 189, 248, 0.55), transparent 34%);
+  animation: fxFloatDrift 3.8s ease-in-out infinite alternate;
+}
+
+.discord-effect-layer.effect-gold {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(250, 204, 21, 0.65), transparent 44%),
+    radial-gradient(circle at 20% 78%, rgba(245, 158, 11, 0.45), transparent 34%),
+    radial-gradient(circle at 82% 82%, rgba(253, 224, 71, 0.5), transparent 32%);
+  animation: fxPulseGlow 3.4s ease-in-out infinite alternate;
+}
+
+/* Animated Avatar Decorations */
+.discord-live-avatar-wrap.deco-headphones,
+.profile-card-avatar.deco-headphones {
+  box-shadow: 0 0 0 3px #38bdf8, 0 -4px 14px rgba(56, 189, 248, 0.75);
+}
+.discord-live-avatar-wrap.deco-halo,
+.profile-card-avatar.deco-halo {
+  box-shadow: 0 0 0 3px #facc15, 0 0 18px rgba(250, 204, 21, 0.85);
+}
+.discord-live-avatar-wrap.deco-sakura,
+.profile-card-avatar.deco-sakura {
+  box-shadow: 0 0 0 3px #f472b6, 0 0 18px rgba(244, 114, 182, 0.8);
+}
+.discord-live-avatar-wrap.deco-flame,
+.profile-card-avatar.deco-flame {
+  box-shadow: 0 0 0 3px #f97316, 0 0 20px rgba(239, 68, 68, 0.85);
+}
+.discord-live-avatar-wrap.deco-crown,
+.profile-card-avatar.deco-crown {
+  box-shadow: 0 0 0 3px #fbbf24, 0 0 22px rgba(251, 191, 36, 0.9);
+}
+.discord-live-avatar-wrap.deco-void,
+.profile-card-avatar.deco-void {
+  box-shadow: 0 0 0 3px #a855f7, 0 0 20px rgba(168, 85, 247, 0.9);
+}
+.discord-live-avatar-wrap.deco-crystal,
+.profile-card-avatar.deco-crystal {
+  box-shadow: 0 0 0 3px #67e8f9, 0 0 20px rgba(236, 72, 153, 0.75);
+}
+.discord-live-avatar-wrap.deco-emerald,
+.profile-card-avatar.deco-emerald {
+  box-shadow: 0 0 0 3px #22c55e, 0 0 18px rgba(34, 197, 94, 0.85);
+}
+
+@keyframes fxFloatDrift {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.62; }
+  100% { transform: translate(4px, -6px) scale(1.04); opacity: 0.88; }
+}
+
+@keyframes fxPulseGlow {
+  0% { opacity: 0.5; filter: brightness(0.95); }
+  100% { opacity: 0.9; filter: brightness(1.18); }
+}
