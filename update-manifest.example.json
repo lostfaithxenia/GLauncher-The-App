@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "title": "PS3 & Obsidian Polish Update",
+  "downloadUrl": "https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v0.2.0/test-fresh-win64.zip",
+  "notes": [
+    "Smooth PS3 XMB scrolling & stalled boot animation until game window opens",
+    "Smooth return transition back to launcher on game exit in both themes",
+    "Remote auto-updater with startup gate, in-app prompt, and What's New screen"
+  ],
+  "fixes": [
+    "Fixed PS3 XMB category & item glide timing",
+    "Fixed controller Home panel & theme-unique Triangle binding"
+  ]
+}

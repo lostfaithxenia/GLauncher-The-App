@@ -1,0 +1,35 @@
+====================================================================
+                  GLauncher Alpha - READ ME FIRST
+====================================================================
+
+Welcome to GLauncher Alpha!
+
+DON'T WORRY - YOUR GAMES ARE 100% SAFE
+--------------------------------------------------------------------
+Installing or cleaning up old versions of this launcher will NEVER
+touch, move, or delete your actual games, game saves, Steam/Roblox
+files, or personal documents.
+
+
+SIMPLE SETUP INSTRUCTIONS
+--------------------------------------------------------------------
+1. (Optional) Remove any old version first:
+   - Double-click "Uninstall-Previous-Versions.bat".
+   - It will reassure you first and ask whether you want to:
+       [1] Pick the old launcher folder yourself, OR
+       [2] Let it automatically search for old launcher files.
+   - Nothing is deleted until you see the exact list and press Y.
+
+2. Install GLauncher Alpha (Fresh Setup):
+   - Double-click "GLauncher-Alpha-Setup.exe" and follow the setup
+     steps to install GLauncher Alpha with the new pretty CD icon.
+   - (Or, if you prefer no installation, you can run
+     "GLauncher-Alpha-Portable.exe" directly from anywhere.)
+
+3. Updates:
+   - Once your Remote Update Manifest URL is configured in Settings
+     (or bundled in future builds), GLauncher automatically checks
+     for updates on startup and every 10 minutes.
+
+Enjoy GLauncher Alpha!
+====================================================================

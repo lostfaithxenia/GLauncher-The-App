@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; media-src 'self' file:; style-src 'self' 'unsafe-inline'; font-src 'self' file: data:; script-src 'self';" />
+  <title>GLauncher Alpha</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="theme-obsidian glass-liquid">
+  <div class="app-shell">
+    <!-- PS3 XMB MP4 / Image Wallpaper Layer (behind WebGL wave) -->
+    <div id="xmbWallpaperWrap" class="xmb-wallpaper hidden" aria-hidden="true">
+      <video id="xmbWallpaperVideo" class="xmb-wallpaper-media hidden" autoplay muted loop playsinline></video>
+      <img id="xmbWallpaperImg" class="xmb-wallpaper-media hidden" alt="" />
+    </div>
+
+    <!-- Ambient Dynamic Hero Blur Glow (Obsidian Dribbble Theme) -->
+    <div id="obsidianHeroBackdrop" class="obsidian-hero-backdrop" aria-hidden="true"></div>
+
+    <!-- Animated React-Bits Style Shader/Canvas Backdrop -->
+    <canvas id="backdropCanvas" class="backdrop-canvas" aria-hidden="true"></canvas>
+
+    <!-- MaXMB PS3 Boot Intro Overlay (skippable, never blocks titlebar controls) -->
+    <div id="ps3Intro" class="intro hidden" aria-hidden="true"></div>
+
+    <!-- Minimal Titlebar -->
+    <header class="titlebar">
+      <div class="titlebar-brand">
+        <span class="brand-disc" aria-hidden="true"></span>
+        <span id="brandTitle" class="brand-name">UNTITLED LAUNCHER</span>
+        <span class="brand-edition-badge">PHYSICAL &amp; XMB EDITION</span>
+      </div>
+
+      <div class="titlebar-right">
+        <button id="btnTitlebarTutorial" class="titlebar-action-pill" title="Interactive Tutorial &amp; Guide">
+          <span>✦ Tutorial</span>
+        </button>
+        <button id="btnTitlebarNotifs" class="titlebar-action-pill" title="Notifications &amp; Trophy Feed">
+          <span>🔔</span>
+          <span id="notifBadgeCount" class="notif-badge-count">0</span>
+        </button>
+        <span id="controllerPill" class="controller-pill hidden" title="Controller Connected (Press Home / Guide or Insert for Quick Panel)">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="10" rx="5" />
+            <path d="M7 12h4M9 10v4M16 11h.01M18 13h.01" stroke-linecap="round" />
+          </svg>
+          <span id="controllerPillText">PAD</span>
+        </span>
+        <div class="titlebar-controls">
+          <button id="btnFullscreen" class="win-btn" title="Toggle Fullscreen (F11)" aria-label="Toggle Fullscreen">
+            <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.2">
+              <path d="M1.5 4.5V1.5h3M7.5 1.5h3v3M10.5 7.5v3h-3M4.5 10.5h-3v-3" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button id="btnMin" class="win-btn" title="Minimize" aria-label="Minimize">
+            <svg viewBox="0 0 12 12" width="11" height="11"><rect x="1" y="5.5" width="10" height="1.2" fill="currentColor" /></svg>
+          </button>
+          <button id="btnMax" class="win-btn" title="Maximize" aria-label="Maximize">
+            <svg viewBox="0 0 12 12" width="11" height="11"><rect x="1.5" y="1.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.2" /></svg>
+          </button>
+          <button id="btnClose" class="win-btn win-btn-close" title="Close" aria-label="Close">
+            <svg viewBox="0 0 12 12" width="11" height="11">
+              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Unobstructed Stage + Unified Selective Options Tab Drawer -->
+    <div class="workspace-body">
+      <div class="stage-column">
+        <!-- Floating Glass Navigation Rail (Obsidian / Modern Themes) -->
+        <nav id="launcherRail" class="launcher-rail" aria-label="Quick Navigation Rail">
+          <button class="rail-btn active" data-rail="stage" title="3D Physical Media Stage">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>
+            </svg>
+            <span class="rail-tooltip">3D Disc &amp; Case Stage</span>
+          </button>
+          <button class="rail-btn" data-rail="shelf" title="Domino / Spindle &amp; 2D Library Shelf">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="13" width="7" height="7" rx="1.5"/><rect x="14" y="13" width="7" height="7" rx="1.5"/>
+            </svg>
+            <span class="rail-tooltip">Library Shelf View</span>
+          </button>
+          <button class="rail-btn" data-rail="xmb" title="Switch to Authentic PS3 XMB Theme">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span class="rail-tooltip">PS3 XMB Mode</span>
+          </button>
+          <div class="rail-divider"></div>
+          <button class="rail-btn" data-rail="trophies" title="Trophies &amp; Achievements">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>
+            </svg>
+            <span class="rail-tooltip">Trophies &amp; Achievements</span>
+          </button>
+          <button class="rail-btn" data-rail="media" title="Media Hub (Music Albums, Videos &amp; Photos)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+            <span class="rail-tooltip">Media Hub (Music, Video &amp; Photo)</span>
+          </button>
+          <button class="rail-btn" data-rail="profile" title="Profile Card, Super Roles &amp; VFX">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+            <span class="rail-tooltip">Profile &amp; Super Roles</span>
+          </button>
+          <button class="rail-btn" data-rail="add" title="Unwrap &amp; Add New Game">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span class="rail-tooltip">+ Unwrap New Game</span>
+          </button>
+          <button class="rail-btn" data-rail="refresh" title="Refresh Theme &amp; Stage (F5)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>
+            </svg>
+            <span class="rail-tooltip">Refresh View (F5)</span>
+          </button>
+        </nav>
+
+        <!-- Prominent Left-Corner Profile Pill with Glowing VFX & Live Status Dot -->
+        <div class="corner-profile-anchor">
+          <button id="btnForefrontProfile" class="corner-profile-btn pfp-frame-neon vfx-prismatic" title="Click to open Profile Card • Double-click for Profile Customization">
+            <span id="forefrontAvatarWrap" class="corner-pfp-circle">
+              <img id="forefrontPfpImg" class="pfp-img hidden" alt="" />
+              <span id="forefrontPfpFallback" class="pfp-fallback">P</span>
+              <span id="forefrontStatusDot" class="live-status-dot status-online"></span>
+            </span>
+            <span class="corner-profile-meta">
+              <span class="profile-name-row">
+                <span id="profileNameLabel" class="profile-name">Player 1</span>
+                <span id="profileLevelPill" class="profile-level-pill">★ LV 1</span>
+              </span>
+              <span id="profileCustomStatusLabel" class="profile-custom-status">Playing on Physical Media Stage</span>
+              <span id="profileRolesMini" class="profile-roles-mini"></span>
+            </span>
+          </button>
+
+          <!-- Animated Expandable Profile Card Popover -->
+          <div id="profileCardPopover" class="profile-card-popover vfx-prismatic hidden" aria-label="User Profile Card">
+            <div id="profileBannerEl" class="profile-card-banner">
+              <button id="btnEditProfileCard" class="profile-banner-edit-btn" title="Customize Profile, Super Roles &amp; VFX">✎ Customize</button>
+            </div>
+            <div class="profile-card-avatar-row">
+              <div id="profileCardAvatarWrap" class="profile-card-avatar pfp-frame-neon">
+                <img id="profileCardAvatarImg" class="pfp-img hidden" alt="" />
+                <span id="profileCardAvatarFallback" class="pfp-fallback">P</span>
+                <span id="profileCardStatusDot" class="live-status-dot status-online"></span>
+              </div>
+              <div class="profile-card-badges" id="profileCardBadges">
+                <span class="profile-aura-badge" title="Animated Profile Aura">✦ PRISMATIC</span>
+                <span class="profile-trophy-badge" id="profileTrophyCountBadge" title="Unlocked Trophies">🏆 0</span>
+              </div>
+            </div>
+            <div class="profile-card-body">
+              <div class="profile-card-names">
+                <h3 id="profileCardName">Player 1</h3>
+                <span id="profileCardHandle" class="profile-card-handle">@player1</span>
+              </div>
+              <div id="profileCardCustomStatus" class="profile-card-status-bubble">
+                <span class="status-pulse-dot"></span>
+                <span id="profileCardStatusText">Playing on Physical Media Stage</span>
+              </div>
+              <div class="profile-card-divider"></div>
+              <div class="profile-card-section">
+                <div class="profile-section-title">ABOUT ME</div>
+                <p id="profileCardBio" class="profile-card-bio">Collector of physical discs, PS3 XMB enthusiast &amp; achievement hunter.</p>
+              </div>
+              <div class="profile-card-section">
+                <div class="profile-section-title">ROLES &amp; SUPER ROLES</div>
+                <div id="profileCardRolesList" class="profile-roles-wrap"></div>
+              </div>
+              <div class="profile-card-section">
+                <div class="profile-section-title">TROPHY LEVEL &amp; ACTIVITY</div>
+                <div class="profile-xp-row">
+                  <span id="profileTrophyLevelText" class="profile-xp-label">Level 1 • 0%</span>
+                  <span id="profileTotalPlaysText" class="profile-xp-sub">0 Total Launches</span>
+                </div>
+                <div class="profile-xp-bar"><div id="profileTrophyProgressFill" class="profile-xp-fill" style="width:18%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dribbble Game Launcher Floating Hero Metadata HUD (Right Side of Stage) -->
+        <aside id="heroGameHud" class="hero-game-hud">
+          <div class="hero-hud-card">
+            <div class="hero-hud-top">
+              <span id="hudPlatformTag" class="hud-platform-pill">PC DVD-ROM</span>
+              <span id="hudYearTag" class="hud-year-pill">2026</span>
+              <span id="hudFavStar" class="hud-fav-star hidden" title="Favorite Game">★</span>
+            </div>
+            <h2 id="hudGameTitle" class="hud-game-title">Select or Unwrap a Game</h2>
+            <div id="hudGameGenre" class="hud-game-genre">Physical Collection • Interactive 3D Media</div>
+            <p id="hudGameSynopsis" class="hud-game-synopsis">Click + New or Unwrap a sealed case to automatically pull HD cover art, back cover, scanned instruction manual, and gameplay trailer.</p>
+
+            <div class="hud-stats-grid">
+              <div class="hud-stat-box">
+                <span class="hud-stat-label">LAUNCHES</span>
+                <span id="hudStatPlays" class="hud-stat-val">0</span>
+              </div>
+              <div class="hud-stat-box">
+                <span class="hud-stat-label">TROPHIES</span>
+                <span id="hudStatTrophies" class="hud-stat-val">0 / 5</span>
+              </div>
+              <div class="hud-stat-box">
+                <span class="hud-stat-label">MEDIA</span>
+                <span id="hudStatMedia" class="hud-stat-val">3D DISC</span>
+              </div>
+            </div>
+
+            <div class="hud-trophy-bar-wrap">
+              <div class="hud-trophy-bar-head">
+                <span>Game Completion</span>
+                <span id="hudTrophyPct">0%</span>
+              </div>
+              <div class="hud-trophy-track"><div id="hudTrophyFill" class="hud-trophy-fill" style="width:0%"></div></div>
+            </div>
+
+            <div class="hud-quick-chips">
+              <button id="btnHudFlipOrOpen" class="hud-chip-btn">Flip / Open (X)</button>
+              <button id="btnHudManual" class="hud-chip-btn">📖 Manual</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 3D Models Stage (Default) -->
+        <main id="stage3dWrap" class="stage-3d-wrap">
+          <div id="canvas3dHost" class="canvas-3d-host"></div>
+          <div id="consoleStatusBadge" class="console-status hidden">Reading disc...</div>
+
+          <!-- Hold-to-Unwrap Plastic Prompt Bar -->
+          <div id="unwrapBar" class="stage-overlay-bar hidden">
+            <div class="unwrap-label">Hold Click on Case (or Hold A / Space) to Unwrap Plastic</div>
+            <div class="unwrap-track"><div id="unwrapFill" class="unwrap-fill"></div></div>
+            <button id="btnCancelUnwrap" class="btn-secondary btn-xs">Cancel</button>
+          </div>
+
+          <!-- Interactive 3D Manual Controls Bar -->
+          <div id="manualBar" class="stage-overlay-bar hidden">
+            <button id="btnManualPrev" class="btn-secondary btn-sm">&#9664; Prev Page</button>
+            <span id="manualPageLabel" class="manual-page-label">Pages 1–2 / 6</span>
+            <button id="btnManualNext" class="btn-secondary btn-sm">Next Page &#9654;</button>
+            <button id="btnManualClose" class="btn-primary btn-sm">Back to Case</button>
+          </div>
+        </main>
+
+        <!-- MaXMB PS3 Cross-Media Bar (Active only when Theme = PS3 XMB) -->
+        <section id="xmbShell" class="xmb-shell hidden" aria-label="PS3 XMB">
+          <div id="xmbGameBg" class="bg-layer" aria-hidden="true"></div>
+          <video id="xmbGameBgVideo" class="bg-video-layer" muted loop playsinline aria-hidden="true"></video>
+          <div id="xmbHoverTrailerStatus" class="xmb-hover-trailer-pill hidden">🎬 Fetching YouTube Trailer…</div>
+
+          <div id="xmbInfobox" class="infobox" title="Click to customize PSN Player Card">
+            <div class="ib-box">
+              <div class="ib-profile">
+                <img id="xmbPsPlusIcon" class="ib-plus" src="assets/maxmb/icons/system/ps_plus.png" alt="" />
+                <img id="xmbAvatarImg" class="ib-avatar" alt="" />
+                <span class="ib-friends"><span class="ib-dot"></span><span id="xmbGameCount" class="ib-count">0</span></span>
+              </div>
+              <span class="ib-dt">
+                <span id="xmbDate" class="ib-date">18/11</span>
+                <span id="xmbClock" class="ib-time">08:00</span>
+              </span>
+              <svg class="ib-clock" viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+                <circle cx="20" cy="20" r="17.5" fill="none" stroke="currentColor" stroke-width="3.6" />
+                <line id="xmbClockHour" class="ib-hour" x1="20" y1="20" x2="20" y2="11" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" />
+                <line id="xmbClockMinute" class="ib-min" x1="20" y1="20" x2="20" y2="8" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+              </svg>
+              <button id="btnXmbRefresh" type="button" class="xmb-refresh-btn" title="Refresh PS3 XMB Theme &amp; Media (F5)" aria-label="Refresh XMB">&#x21bb;</button>
+            </div>
+          </div>
+
+          <div id="xmbCross" class="xmb show">
+            <div id="xmbCategories" class="cat-row" role="tablist"></div>
+            <div id="xmbItems" class="item-col" role="listbox"></div>
+          </div>
+
+          <!-- PS3 PSN Content Info Backdrop Card (Store / Home / What's New / Player Card preview) -->
+          <div id="xmbCinfoPanel" class="xmb-cinfo-panel hidden" aria-hidden="true">
+            <div class="xmb-cinfo-card">
+              <img id="xmbCinfoImg" class="xmb-cinfo-img" alt="" />
+              <div class="xmb-cinfo-overlay">
+                <h3 id="xmbCinfoTitle">PlayStation®Network</h3>
+                <p id="xmbCinfoDesc">Authentic PS3 Firmware 4.93 &amp; MaXMB Experience</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- In-Launcher PS3 Media Player: Photo Viewer, Video Player, and Music Player Bar -->
+          <div id="xmbPhotoViewer" class="xmb-media-modal hidden" aria-label="PS3 Photo Viewer">
+            <div class="xmb-media-header">
+              <span id="xmbPhotoTitle">Photo Viewer</span>
+              <div class="xmb-media-controls">
+                <button id="btnXmbPhotoPrev" class="btn-secondary btn-xs">&#9664; Prev</button>
+                <button id="btnXmbPhotoNext" class="btn-secondary btn-xs">Next &#9654;</button>
+                <button id="btnXmbPhotoSetBg" class="btn-primary btn-xs">Set as Wallpaper</button>
+                <button id="btnXmbPhotoSetPfp" class="btn-secondary btn-xs">Set as PFP</button>
+                <button id="btnXmbPhotoClose" class="btn-danger btn-xs">Close (Esc)</button>
+              </div>
+            </div>
+            <div class="xmb-photo-stage">
+              <img id="xmbPhotoImg" alt="" />
+            </div>
+          </div>
+
+          <div id="xmbVideoPlayerModal" class="xmb-media-modal hidden" aria-label="PS3 Video Player">
+            <div class="xmb-media-header">
+              <span id="xmbVideoTitle">Video Player</span>
+              <div class="xmb-media-controls">
+                <button id="btnXmbVideoSetBg" class="btn-primary btn-xs">Set as XMB Background</button>
+                <button id="btnXmbVideoClose" class="btn-danger btn-xs">Close (Esc)</button>
+              </div>
+            </div>
+            <div class="xmb-video-stage">
+              <video id="xmbVideoPlayerEl" controls autoplay playsinline></video>
+            </div>
+          </div>
+
+          <div id="xmbMusicBar" class="xmb-music-bar hidden" aria-label="PS3 Music Player">
+            <img class="xmb-music-icon" src="assets/maxmb/icons/theme/icon_music.png" alt="" />
+            <div class="xmb-music-meta">
+              <div id="xmbMusicTitle" class="xmb-music-title">Now Playing</div>
+              <div id="xmbMusicTime" class="xmb-music-time">0:00 / 0:00</div>
+            </div>
+            <div class="xmb-music-controls">
+              <button id="btnXmbMusicPrev" class="btn-secondary btn-xs">&#9664;&#9664;</button>
+              <button id="btnXmbMusicToggle" class="btn-primary btn-xs">Pause</button>
+              <button id="btnXmbMusicNext" class="btn-secondary btn-xs">&#9654;&#9654;</button>
+              <button id="btnXmbMusicClose" class="btn-danger btn-xs">&times;</button>
+            </div>
+            <audio id="xmbAudioPlayerEl"></audio>
+          </div>
+
+          <div id="xmbMediaFolderPrompt" class="xmb-folder-prompt hidden">
+            <div class="xmb-folder-prompt-text">
+              <strong>Connect PS3 Media Folders?</strong>
+              <span>Device Pictures, Videos &amp; Music are connected. Create dedicated <code>ps3_pic</code>, <code>ps3_video</code> &amp; <code>ps3_audio</code> folders in your launcher directory for your custom XMB media &amp; assets?</span>
+            </div>
+            <div class="xmb-folder-prompt-actions">
+              <button id="btnCreatePs3FoldersPrompt" class="btn-primary btn-xs">Create ps3_pic / ps3_video / ps3_audio</button>
+              <button id="btnDismissPs3FoldersPrompt" class="btn-secondary btn-xs">Not Now</button>
+            </div>
+          </div>
+
+          <div class="xmb-hints" aria-hidden="true">
+            <span class="xmb-hint"><img src="assets/maxmb/icons/system/glyph_cross.png" alt="" />Enter</span>
+            <span class="xmb-hint"><img src="assets/maxmb/icons/system/glyph_circle.png" alt="" />Back</span>
+            <span class="xmb-hint"><img src="assets/maxmb/icons/system/glyph_triangle.png" alt="" />Options</span>
+          </div>
+        </section>
+
+        <!-- 2D Shelf Stage -->
+        <main id="stage2dWrap" class="stage-wrap hidden">
+          <div id="mediaGrid" class="media-grid size-md mode-cd" tabindex="0"></div>
+        </main>
+
+        <div id="emptyState" class="empty-state hidden">
+          <div class="empty-disc"></div>
+          <h2>Your shelf is empty</h2>
+          <p>Unwrap your first sealed game case, give it a title for auto-covers &amp; manual, or point to your game .exe.</p>
+          <div class="empty-actions">
+            <button id="btnEmptyOpenAdd" class="btn-primary">+ Unwrap New Game</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FULL-SCREEN GLASSMORPHIC OPTIONS & CUSTOMIZATION COMMAND CENTER -->
+      <aside id="optionsDrawer" class="options-drawer options-fullscreen hidden" aria-label="Options and Customizations">
+        <div class="drawer-header">
+          <div class="fullscreen-panel-brand">
+            <span class="brand-disc"></span>
+            <div>
+              <h2>Launcher Studio &amp; Customization</h2>
+              <p>Full-Screen Command Center • Display, Games, Profile &amp; Super Roles, Trophies &amp; Media</p>
+            </div>
+          </div>
+          <div class="selective-tabs" role="tablist">
+            <button class="sel-tab active" data-tab="display" role="tab">Display &amp; 3D</button>
+            <button class="sel-tab" data-tab="library" role="tab">Games &amp; .exe</button>
+            <button class="sel-tab" data-tab="profiles" role="tab">Profile &amp; Super Roles</button>
+            <button class="sel-tab" data-tab="trophies" role="tab">Trophies &amp; Alerts</button>
+            <button class="sel-tab" data-tab="launcher" role="tab">Media &amp; System</button>
+          </div>
+          <button id="btnDrawerRefresh" class="btn-secondary btn-sm" title="Refresh Active Theme &amp; Stage (F5)" style="margin-right:8px;">&#x21bb; Refresh</button>
+          <button id="btnCloseDrawer" class="drawer-close" title="Close Options (Esc)">&times;</button>
+        </div>
+
+        <div class="drawer-body">
+          <!-- TAB 1: DISPLAY & 3D MODEL CONTROLS -->
+          <section id="tab-display" class="tab-panel">
+            <div class="panel-group">
+              <div class="group-label">Theme &amp; Shell Mode</div>
+              <div class="seg-row">
+                <button id="btnQuickThemeObsidian" class="seg-btn active">Obsidian Glass</button>
+                <button id="btnQuickThemeXmb" class="seg-btn">PS3 XMB (4.93)</button>
+              </div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label">Physical Media Format</div>
+              <div class="seg-row">
+                <button id="modeCdBtn" class="seg-btn active">Game CDs</button>
+                <button id="modeCaseBtn" class="seg-btn">Game Cases</button>
+              </div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label">Render Mode</div>
+              <div class="seg-row seg-row-3">
+                <button id="render3dBtn" class="seg-btn active">3D Hero</button>
+                <button id="renderShelfBtn" class="seg-btn">Domino / Spindle</button>
+                <button id="render2dBtn" class="seg-btn">2D Shelf</button>
+              </div>
+              <p class="hint-text" style="margin-top:6px;">Domino / Spindle displays all cases lined up like dominoes on a shelf or all CDs stacked on a spindle tower.</p>
+            </div>
+
+            <div id="group3dActions" class="panel-group">
+              <div class="group-label">3D Model, Manual &amp; Console</div>
+
+              <div id="controls3dCd" class="action-grid">
+                <button id="btn3dFlipDisc" class="btn-secondary btn-sm">Flip Disc Side (F)</button>
+                <button id="btn3dSpinBurst" class="btn-secondary btn-sm">Spin Up</button>
+                <button id="btn3dResetCd" class="btn-secondary btn-sm">Reset Angle</button>
+                <button id="btn3dTestConsoleCd" class="btn-secondary btn-sm">Test Console</button>
+              </div>
+
+              <div id="controls3dCase" class="action-grid hidden">
+                <button id="btn3dOpenCase" class="btn-secondary btn-sm">Open Case (X / □)</button>
+                <button id="btn3dEjectDisc" class="btn-secondary btn-sm">Eject Disc (E)</button>
+                <button id="btn3dReadManual" class="btn-secondary btn-sm">Read Manual</button>
+                <button id="btn3dTestConsoleCase" class="btn-secondary btn-sm">Test Console</button>
+                <div class="angle-row">
+                  <button class="btn-secondary btn-xs" data-angle="front">Front</button>
+                  <button class="btn-secondary btn-xs" data-angle="spine">Spine</button>
+                  <button class="btn-secondary btn-xs" data-angle="back">Back</button>
+                </div>
+              </div>
+              <p class="hint-text">Drag to orbit 360°, scroll to zoom, click the 3D case to open, or click the inner booklet to flip manual pages.</p>
+            </div>
+
+            <div id="group2dOptions" class="panel-group hidden">
+              <div class="group-label">2D Shelf Options</div>
+              <div class="seg-row size-toggle">
+                <button class="size-btn seg-btn" data-size="sm">Small</button>
+                <button class="size-btn seg-btn active" data-size="md">Medium</button>
+                <button class="size-btn seg-btn" data-size="lg">Large</button>
+              </div>
+              <label class="check-row">
+                <input id="settingSpinHover" type="checkbox" checked />
+                <span>Spin 2D CD on hover</span>
+              </label>
+              <label class="check-row">
+                <input id="settingShowLabels" type="checkbox" checked />
+                <span>Show titles beneath 2D media</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- TAB 2: LIBRARY, AUTO METADATA, TRAILERS & .EXE -->
+          <section id="tab-library" class="tab-panel hidden">
+            <div class="panel-group">
+              <div class="group-label">Find &amp; Sort Games</div>
+              <input id="searchInput" type="text" class="text-input" placeholder="Search games..." autocomplete="off" />
+              <div class="split-2">
+                <select id="filterSelect" class="select-input">
+                  <option value="all">All Games</option>
+                  <option value="favorites">Favorites Only</option>
+                </select>
+                <select id="sortSelect" class="select-input">
+                  <option value="recent">Recently Played</option>
+                  <option value="title">Title A–Z</option>
+                  <option value="played">Most Played</option>
+                  <option value="added">Date Added</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-header-row">
+                <span class="group-label" id="formModeHeading">Selected Game / .exe</span>
+                <button id="btnNewGameMode" type="button" class="btn-primary btn-xs">+ Unwrap New Game</button>
+              </div>
+
+              <form id="gameForm" class="stack-form">
+                <input type="hidden" id="fieldId" />
+
+                <div class="form-field">
+                  <label for="fieldTitle">Game Title (auto-searches HD cover &amp; metadata)</label>
+                  <input id="fieldTitle" type="text" class="text-input" required placeholder="e.g. WWE '12, Elden Ring..." />
+                </div>
+
+                <div class="form-field">
+                  <label for="fieldExec">Executable (.exe / .lnk / URI)</label>
+                  <div class="input-with-btn">
+                    <input id="fieldExec" type="text" class="text-input" placeholder="C:\Path\To\Game.exe" />
+                    <button type="button" id="btnBrowseExec" class="btn-secondary btn-sm">Browse…</button>
+                  </div>
+                  <div class="quick-exe-row">
+                    <button type="button" id="btnDetectRoblox" class="btn-link">Detect Roblox Player (.exe)</button>
+                    <button type="button" id="btnTestNotepadExe" class="btn-link">Use Notepad (.exe) to test</button>
+                    <button type="button" id="btnOpenGameFolder" class="btn-link hidden">Open Folder</button>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label>HD Front Cover (Auto-fitted to Case &amp; CD)</label>
+                  <div class="input-with-btn">
+                    <input id="fieldArtwork" type="text" class="text-input" placeholder="Auto-fetched if empty" readonly />
+                    <button type="button" id="btnAutoFetchArt" class="btn-secondary btn-sm" title="Search Cover, Back &amp; Synopsis">Auto</button>
+                    <button type="button" id="btnBrowseArt" class="btn-secondary btn-sm">File…</button>
+                    <button type="button" id="btnClearArt" class="btn-secondary btn-sm">Clear</button>
+                  </div>
+                  <div id="coverDropZone" class="cover-drop-zone" tabindex="0">
+                    Drag &amp; drop cover image here (PNG / JPG / WEBP) to fit Case &amp; CD
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label>Back Cover Art (Optional — auto-built if blank)</label>
+                  <div class="input-with-btn">
+                    <input id="fieldBackArtwork" type="text" class="text-input" placeholder="Auto-built from screenshot/cover" readonly />
+                    <button type="button" id="btnBrowseBackArt" class="btn-secondary btn-sm">File…</button>
+                    <button type="button" id="btnClearBackArt" class="btn-secondary btn-sm">Clear</button>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label>Official Instruction Manual (Archive.org Scans)</label>
+                  <div class="input-with-btn">
+                    <input id="fieldManualStatus" type="text" class="text-input" placeholder="Auto-fetched official pages if available" readonly />
+                    <button type="button" id="btnFetchManual" class="btn-secondary btn-sm">Fetch</button>
+                    <button type="button" id="btnClearManual" class="btn-secondary btn-sm">Clear</button>
+                  </div>
+                </div>
+
+                <div class="split-2">
+                  <div class="form-field">
+                    <label for="fieldPlatform">Disc / Case Tag</label>
+                    <input id="fieldPlatform" type="text" class="text-input" placeholder="PC DVD" maxlength="14" />
+                  </div>
+                  <div class="form-field">
+                    <label for="fieldYear">Year</label>
+                    <input id="fieldYear" type="text" class="text-input" placeholder="2026" maxlength="6" />
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label for="fieldGenre">Genre / Subtitle</label>
+                  <input id="fieldGenre" type="text" class="text-input" placeholder="Action RPG, Wrestling..." />
+                </div>
+
+                <div class="form-field">
+                  <label for="fieldSynopsis">Back Cover &amp; Manual Synopsis</label>
+                  <textarea id="fieldSynopsis" rows="2" class="text-area" placeholder="Game overview shown on the back cover and inside the manual..."></textarea>
+                </div>
+
+                <div class="split-2">
+                  <div class="form-field">
+                    <label for="fieldAccent">Accent Color</label>
+                    <input id="fieldAccent" type="color" value="#38bdf8" class="color-picker" />
+                  </div>
+                  <div class="form-field">
+                    <label for="fieldSecondary">Case / Base Tone</label>
+                    <input id="fieldSecondary" type="color" value="#151926" class="color-picker" />
+                  </div>
+                </div>
+
+                <div class="form-actions-row">
+                  <button type="button" id="btnToggleFav" class="btn-secondary btn-sm">★ Fav</button>
+                  <button type="button" id="btnDeleteGame" class="btn-danger btn-sm hidden">Remove</button>
+                  <button type="submit" id="btnSaveGame" class="btn-primary btn-sm" style="margin-left:auto;">Save Game</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <!-- TAB 3: PROFILES, SUPER ROLES, GLOWING VFX & PS3 XMB CUSTOMIZATION -->
+          <section id="tab-profiles" class="tab-panel hidden">
+            <div class="panel-group">
+              <div class="group-label">Switch or Manage Profiles</div>
+              <div id="profileList" class="profile-list"></div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label">Profile Identity, Live Status &amp; Glowing VFX</div>
+
+              <div class="form-field">
+                <label>Avatar / PFP (Copied safely into <code>ps3_pic</code> — PNG, GIF, Gradient or PSN)</label>
+                <div class="pfp-editor-row">
+                  <div id="activePfpPreviewWrap" class="pfp-preview-lg pfp-frame-neon">
+                    <img id="activePfpPreviewImg" class="pfp-img hidden" alt="" />
+                    <span id="activePfpPreviewFallback" class="pfp-fallback">P</span>
+                  </div>
+                  <div class="pfp-btn-stack">
+                    <button type="button" id="btnPickPfp" class="btn-secondary btn-sm">Upload PNG / GIF…</button>
+                    <button type="button" id="btnOpenAvatarGallery" class="btn-primary btn-sm">Avatar Gallery (Gradient &amp; PSN)</button>
+                    <button type="button" id="btnClearPfp" class="btn-secondary btn-xs">Reset Avatar</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Collapsible Avatar Gallery (Gradient Icons + PS3 Firmware + PSN Avatars) -->
+              <div id="avatarGalleryBox" class="avatar-gallery-box hidden">
+                <div class="avatar-gallery-tabs">
+                  <button type="button" class="av-tab active" data-avtab="gradient">Gradient Icons</button>
+                  <button type="button" class="av-tab" data-avtab="firmware">PS3 Firmware (4.93)</button>
+                  <button type="button" class="av-tab" data-avtab="psn">MaXMB PSN Avatars</button>
+                </div>
+                <div id="avatarGalleryGrid" class="avatar-gallery-grid"></div>
+              </div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="profileStatusSelect">Online Status</label>
+                  <select id="profileStatusSelect" class="select-input">
+                    <option value="online">🟢 Online</option>
+                    <option value="idle">🌙 Idle</option>
+                    <option value="dnd">⛔ Do Not Disturb</option>
+                    <option value="invisible">⚪ Invisible</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="profileVfxSelect">Glowing VFX Aura</label>
+                  <select id="profileVfxSelect" class="select-input">
+                    <option value="prismatic">✦ Prismatic Pulse Aura</option>
+                    <option value="neon">⚡ Cyber Neon Pulse</option>
+                    <option value="void">🔥 Obsidian Void Flame</option>
+                    <option value="holo">🌈 Holographic Shimmer</option>
+                    <option value="gold">🏆 PS3 Platinum Gold</option>
+                    <option value="none">Minimal (No VFX)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="profileHandleInput">Player Handle / Tag</label>
+                  <input id="profileHandleInput" type="text" class="text-input" maxlength="28" placeholder="@player1" />
+                </div>
+                <div class="form-field">
+                  <label for="profileBannerPreset">Profile Card Banner</label>
+                  <select id="profileBannerPreset" class="select-input">
+                    <option value="linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)">Prismatic Cyberpunk</option>
+                    <option value="linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #38bdf8 100%)">Obsidian Midnight</option>
+                    <option value="linear-gradient(135deg, #7928ca 0%, #ff0080 100%)">Synthwave Magenta</option>
+                    <option value="linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">Emerald Matrix</option>
+                    <option value="linear-gradient(135deg, #f12711 0%, #f5af19 100%)">Solar Flare</option>
+                    <option value="url('./assets/maxmb/cinfo/cinfo-bg-home-modern.jpg')">PS3 Home Modern</option>
+                    <option value="url('./assets/maxmb/cinfo/cinfo-bg-storegame.jpg')">PS3 Store Cosmic</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="profileCustomStatusInput">Custom Status Activity</label>
+                <input id="profileCustomStatusInput" type="text" class="text-input" maxlength="70" placeholder="Playing on Physical Media Stage..." />
+              </div>
+
+              <div class="form-field">
+                <label for="profileBioInput">About Me / Bio</label>
+                <textarea id="profileBioInput" rows="2" class="text-area" maxlength="220" placeholder="Write your profile bio..."></textarea>
+              </div>
+
+              <div class="form-field">
+                <label>Custom Roles &amp; Animated Super Roles (Click × to remove)</label>
+                <div id="profileRolesEditorList" class="profile-roles-wrap"></div>
+                <div class="role-creator-row" style="margin-top:6px;">
+                  <input id="newRoleNameInput" type="text" class="text-input" maxlength="22" placeholder="Role name (e.g. ★ Speedrunner)" />
+                  <select id="newRoleTierSelect" class="select-input" style="max-width:140px;">
+                    <option value="standard">Standard Role</option>
+                    <option value="super">✦ Super Role (Animated)</option>
+                    <option value="mythic">🔥 Mythic Role (Prismatic)</option>
+                  </select>
+                  <input id="newRoleColorInput" type="color" value="#38bdf8" class="color-picker color-picker-inline" />
+                  <button type="button" id="btnAddProfileRole" class="btn-primary btn-sm">+ Add Role</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- PS3 XMB Player Card & Firmware Asset Customization -->
+            <div class="panel-group">
+              <div class="group-label">PS3 XMB Firmware &amp; MaXMB Customization</div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="settingXmbWaveStyle">PS3 Wave Engine</label>
+                  <select id="settingXmbWaveStyle" class="select-input">
+                    <option value="original">Original PS3 (lines.qrc 4.93)</option>
+                    <option value="complex">MaXMB Complex Spline</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="settingXmbBgColor">PS3 Wave Color</label>
+                  <select id="settingXmbBgColor" class="select-input">
+                    <option value="auto">Original (Month &amp; Time)</option>
+                    <option value="blue">Classic Blue</option>
+                    <option value="royal-blue">Royal Blue</option>
+                    <option value="purple">Purple</option>
+                    <option value="red">Red</option>
+                    <option value="pink">Pink</option>
+                    <option value="orange">Orange</option>
+                    <option value="olive">Olive</option>
+                    <option value="green">Green</option>
+                    <option value="turquoise">Turquoise</option>
+                    <option value="brown">Brown</option>
+                    <option value="silver">Silver</option>
+                    <option value="black">Black</option>
+                    <option value="month:0">January</option>
+                    <option value="month:1">February</option>
+                    <option value="month:2">March</option>
+                    <option value="month:3">April</option>
+                    <option value="month:4">May</option>
+                    <option value="month:5">June</option>
+                    <option value="month:6">July</option>
+                    <option value="month:7">August</option>
+                    <option value="month:8">September</option>
+                    <option value="month:9">October</option>
+                    <option value="month:10">November</option>
+                    <option value="month:11">December</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="settingXmbIconSet">MaXMB Icon Pack</label>
+                  <select id="settingXmbIconSet" class="select-input">
+                    <option value="default">PS3 Official Gloss (4.93)</option>
+                    <option value="flat">MaXMB Flat Icons</option>
+                    <option value="vice">MaXMB Neon Vice Icons</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="settingXmbSoundSet">XMB Sound Pack</label>
+                  <select id="settingXmbSoundSet" class="select-input">
+                    <option value="ps3">PS3 Original Sounds</option>
+                    <option value="ps4">PS4 System Sounds</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="psnCardColorInput">PSN Player Card Color</label>
+                  <input id="psnCardColorInput" type="color" value="#1d4ed8" class="color-picker" />
+                </div>
+                <div class="form-field">
+                  <label for="psnCommentInput">PSN Status Comment</label>
+                  <input id="psnCommentInput" type="text" class="text-input" maxlength="60" placeholder="Welcome to my PS3 XMB!" />
+                </div>
+              </div>
+
+              <div class="split-2" style="margin-top:6px;">
+                <label class="check-row">
+                  <input id="settingXmbSounds" type="checkbox" checked />
+                  <span>XMB Navigation Sounds</span>
+                </label>
+                <label class="check-row">
+                  <input id="settingXmbIntro" type="checkbox" checked />
+                  <span>PS3 Coldboot Intro</span>
+                </label>
+              </div>
+
+              <div class="form-field" style="margin-top:10px;">
+                <label>Custom XMB Video (.mp4) / Image Wallpaper (Saved in <code>ps3_video</code> / <code>ps3_pic</code>)</label>
+                <div class="input-with-btn">
+                  <input id="xmbWallpaperInput" type="text" class="text-input" placeholder="Using Authentic PS3 Wave (lines.qrc)" readonly />
+                  <button type="button" id="btnPickXmbWallpaper" class="btn-secondary btn-sm">Pick MP4 / Img…</button>
+                  <button type="button" id="btnClearXmbWallpaper" class="btn-secondary btn-sm">Clear</button>
+                </div>
+              </div>
+
+              <button type="button" id="btnReplayPs3Intro" class="btn-secondary btn-sm" style="margin-top:8px; width:100%;">Replay PS3 Coldboot Intro</button>
+            </div>
+
+            <!-- Remote Auto-Updater -->
+            <div class="panel-group">
+              <div class="group-label">Remote Updates &amp; Patch Notes</div>
+              <div class="form-field">
+                <label for="updateFeedUrlInput">Remote Update Manifest URL (JSON)</label>
+                <div class="input-with-btn">
+                  <input id="updateFeedUrlInput" type="text" class="text-input" placeholder="https://raw.githubusercontent.com/.../update-manifest.json" />
+                  <button type="button" id="btnSaveUpdateFeed" class="btn-secondary btn-sm">Save</button>
+                </div>
+              </div>
+              <div class="split-2" style="margin-top:6px;">
+                <button type="button" id="btnCheckUpdatesNow" class="btn-primary btn-sm">Check for Updates Now</button>
+                <button type="button" id="btnPreviewWhatsNew" class="btn-secondary btn-sm">Preview What's New</button>
+              </div>
+              <div id="updateStatusHint" class="hint-text" style="margin-top:6px;">Current Version: v0.1.0</div>
+            </div>
+
+            <!-- Obsidian Theme & Shader Settings -->
+            <div class="panel-group">
+              <div class="group-label">Theme, Shaders &amp; 3D Quality</div>
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="settingTheme">Active Theme</label>
+                  <select id="settingTheme" class="select-input">
+                    <option value="obsidian">Obsidian Glass (Default Main Theme)</option>
+                    <option value="xmb">PS3 XMB (Firmware 4.93 + MaXMB)</option>
+                    <option value="cyber">Neon Cyber</option>
+                    <option value="walnut">Warm Studio</option>
+                    <option value="arctic">Arctic Slate</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="settingBackdropMode">Animated Shader</label>
+                  <select id="settingBackdropMode" class="select-input">
+                    <option value="aurora">Aurora Shader</option>
+                    <option value="silk">React Bits Silk (WebGL)</option>
+                    <option value="iridescence">React Bits Iridescence</option>
+                    <option value="xmb-wave">PS3 lines.qrc Wave</option>
+                    <option value="starfield">Starfield Drift</option>
+                    <option value="cybergrid">Cyber Horizon</option>
+                    <option value="clean">Clean Static</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="settingGlassStyle">Glass Material</label>
+                  <select id="settingGlassStyle" class="select-input">
+                    <option value="liquid">Liquid Glass</option>
+                    <option value="carbon">Brushed Carbon</option>
+                    <option value="matte">Minimal Matte</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="settingGraphicsQuality">3D Graphics</label>
+                  <select id="settingGraphicsQuality" class="select-input">
+                    <option value="high">High (Best)</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="performance">Max FPS</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="settingPfpFrame">PFP Ring Style</label>
+                  <select id="settingPfpFrame" class="select-input">
+                    <option value="dev-sparkle">✦ Dev Sparkle Crown (Thick Ring + Sparkles)</option>
+                    <option value="neon">Neon Glow</option>
+                    <option value="holo">Holographic</option>
+                    <option value="gold">Gold Trim</option>
+                    <option value="minimal">Minimal</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="settingUiAccent">Accent Color</label>
+                  <input id="settingUiAccent" type="color" value="#38bdf8" class="color-picker" />
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label" id="profileFormTitle">Create New Profile</div>
+              <form id="profileCreateForm" class="stack-form">
+                <div class="input-with-btn">
+                  <input id="profileNameInput" type="text" class="text-input" required maxlength="24" placeholder="Profile name..." />
+                  <input id="profileColorInput" type="color" value="#a855f7" class="color-picker color-picker-inline" />
+                </div>
+                <label id="profileCopyRow" class="check-row">
+                  <input id="profileCopyGames" type="checkbox" />
+                  <span>Copy games from active profile</span>
+                </label>
+                <div class="form-actions-row">
+                  <button type="button" id="btnProfileCancelEdit" class="btn-secondary btn-sm hidden">Cancel</button>
+                  <button type="submit" id="btnProfileSubmit" class="btn-primary btn-sm">Create Profile</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <!-- TAB 4: TROPHIES, ACHIEVEMENTS & NOTIFICATION CENTER -->
+          <section id="tab-trophies" class="tab-panel hidden">
+            <div class="panel-group">
+              <div class="group-header-row">
+                <span class="group-label">Trophy &amp; Achievement Summary</span>
+                <button type="button" id="btnTestTrophyToast" class="btn-primary btn-xs">🏆 Test Trophy Unlock</button>
+              </div>
+              <div class="trophy-summary-card">
+                <div class="trophy-level-circle" id="drawerTrophyLevelBadge">1</div>
+                <div class="trophy-counts-grid">
+                  <div class="t-count"><img src="assets/maxmb/icons/trophies/trophy_platinum.svg" alt="" /> <span id="tCountPlat">0</span></div>
+                  <div class="t-count"><img src="assets/maxmb/icons/trophies/trophy_gold.svg" alt="" /> <span id="tCountGold">0</span></div>
+                  <div class="t-count"><img src="assets/maxmb/icons/trophies/trophy_silver.svg" alt="" /> <span id="tCountSilver">0</span></div>
+                  <div class="t-count"><img src="assets/maxmb/icons/trophies/trophy_bronze.svg" alt="" /> <span id="tCountBronze">0</span></div>
+                </div>
+              </div>
+              <div class="split-2" style="margin-top:8px;">
+                <label class="check-row">
+                  <input id="settingNotifsEnabled" type="checkbox" checked />
+                  <span>Enable Pop-Up Notifications</span>
+                </label>
+                <label class="check-row">
+                  <input id="settingTrophySound" type="checkbox" checked />
+                  <span>Trophy Unlock Chime</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-header-row">
+                <span class="group-label">Game Achievements &amp; Trophies</span>
+                <button type="button" id="btnUnlockNextGameTrophy" class="btn-secondary btn-xs">Unlock Next Trophy</button>
+              </div>
+              <div id="achievementsListEl" class="achievements-list"></div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-header-row">
+                <span class="group-label">Recent Notifications</span>
+                <button type="button" id="btnClearNotifications" class="btn-secondary btn-xs">Clear</button>
+              </div>
+              <div id="notificationHistoryList" class="notif-history-list"></div>
+            </div>
+          </section>
+
+          <!-- TAB 5: MEDIA FOLDERS (ps3_pic, ps3_video, ps3_audio) & SYSTEM SETTINGS -->
+          <section id="tab-launcher" class="tab-panel hidden">
+            <div class="panel-group">
+              <div class="group-label">Launcher &amp; Device Media Folders (ps3_pic / ps3_video / ps3_audio)</div>
+              <p class="hint-text">Your Windows <strong>Pictures</strong>, <strong>Videos</strong>, and <strong>Music</strong> folders are connected automatically to PS3 XMB. All customized PFPs, GIFs, MP4s, trailers, and audio are copied into <code>ps3_pic</code>, <code>ps3_video</code>, and <code>ps3_audio</code> inside the launcher main folder so they stay safe even if deleted from Downloads.</p>
+              <div id="mediaFoldersStatusText" class="hint-text" style="color:#7dd3fc;">Checking launcher media folders…</div>
+              <div class="split-3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+                <button type="button" id="btnOpenPs3PicFolder" class="btn-secondary btn-sm">📁 Open ps3_pic</button>
+                <button type="button" id="btnOpenPs3VideoFolder" class="btn-secondary btn-sm">🎬 Open ps3_video</button>
+                <button type="button" id="btnOpenPs3AudioFolder" class="btn-secondary btn-sm">🎵 Open ps3_audio</button>
+              </div>
+              <button type="button" id="btnAddAudioTrack" class="btn-primary btn-sm" style="width:100%;">+ Import Audio Track into ps3_audio</button>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label">Onboarding &amp; Interactive Tutorial</div>
+              <p class="hint-text">Replay the animated onboarding tutorial covering 3D Cases/CDs, PS3 XMB Hover Trailers, Profile &amp; Super Roles, Trophies, and Controller shortcuts.</p>
+              <button type="button" id="btnReplayTutorial" class="btn-primary btn-sm" style="width:100%;">✦ Launch Animated Tutorial</button>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label">3rd-Party PS4 / Controller Home Button &amp; Quick Panel</div>
+              <p class="hint-text">Press the <strong>PS / Home / Guide</strong> button, <strong>Touchpad Click</strong>, or <strong>Share + Options</strong> on any PS4 / 3rd-party controller (or <strong>Insert</strong> on keyboard) to open the Quick Power &amp; Options Panel.</p>
+              <div class="controller-bind-box">
+                <div class="bind-status-row">
+                  <span>Custom Home Button:</span>
+                  <strong id="customHomeBtnLabel">Auto (PS Home / Button 12 / 13 / 16 + Share+Options)</strong>
+                </div>
+                <div class="split-2" style="margin-top:8px;">
+                  <button type="button" id="btnBindHomeButton" class="btn-primary btn-sm">🎮 Detect / Bind Home Button</button>
+                  <button type="button" id="btnResetHomeButton" class="btn-secondary btn-sm">Reset to Auto</button>
+                </div>
+              </div>
+              <button type="button" id="btnTestOverlay" class="btn-secondary btn-sm" style="width:100%; margin-top:8px;">Open Quick Power Panel Now</button>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label">Launcher Identity</div>
+              <div class="form-field">
+                <label for="settingLauncherName">Launcher Name (optional)</label>
+                <input id="settingLauncherName" type="text" class="text-input" placeholder="UNTITLED LAUNCHER" maxlength="32" />
+              </div>
+              <button type="button" id="btnSaveLauncherName" class="btn-primary btn-sm">Apply Name</button>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Sleek Dribbble-Style Floating Glass Bottom Dock -->
+    <footer class="bottom-dock">
+      <div class="dock-nav">
+        <button id="btnPrevGame" class="dock-arrow" title="Previous Game (Left Arrow)">&#9664;</button>
+        <div id="dockDiscPreview" class="deck-disc-mini"></div>
+        <div class="dock-game-info">
+          <div class="dock-title-row">
+            <h3 id="deckTitle">No Game Selected</h3>
+            <span id="deckPlatform" class="tag-badge">PC</span>
+            <span id="deckDemoTag" class="demo-badge hidden">SAMPLE</span>
+          </div>
+          <p id="deckSubtitle" class="deck-sub">Open Options to add a game</p>
+        </div>
+        <button id="btnNextGame" class="dock-arrow" title="Next Game (Right Arrow)">&#9654;</button>
+      </div>
+
+      <div class="dock-actions">
+        <button id="btnDockTrophies" class="btn-secondary btn-sm" title="View Game Trophies &amp; Achievements">🏆 Trophies</button>
+        <button id="btnDockManual" class="btn-secondary btn-sm" title="Open Official Instruction Manual">📖 Manual</button>
+        <button id="btnQuickUnwrap" class="btn-secondary btn-sm" title="Unwrap &amp; Add a New Game">+ New</button>
+
+        <button id="btnPlayGame" class="btn-play">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <polygon points="6 4 20 12 6 20 6 4" />
+          </svg>
+          <span>Play</span>
+        </button>
+
+        <button id="btnToggleOptions" class="btn-options-tab">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+          </svg>
+          <span>Options</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Obsidian Theme Media Hub (Music Albums, Videos & Photos) + Floating Music Pill -->
+  <div id="obsidianMediaHub" class="obsidian-media-hub hidden" role="dialog" aria-modal="true" aria-label="Obsidian Media Hub">
+    <div class="obsidian-media-card">
+      <div class="obsidian-media-head">
+        <div class="obsidian-media-title">
+          <span class="brand-disc"></span>
+          <div>
+            <h2>Obsidian Media Hub</h2>
+            <p>Music Albums, Videos &amp; Photos • Synced seamlessly with PS3 XMB</p>
+          </div>
+        </div>
+        <div class="obsidian-media-tabs">
+          <button type="button" class="obs-m-tab active" data-mtab="music">🎵 Music &amp; Albums</button>
+          <button type="button" class="obs-m-tab" data-mtab="video">🎬 Videos</button>
+          <button type="button" class="obs-m-tab" data-mtab="photo">🖼 Photos</button>
+        </div>
+        <button id="btnCloseObsidianMedia" class="drawer-close" title="Close Media Hub (Esc)">&times;</button>
+      </div>
+      <div id="obsidianMediaGrid" class="obsidian-media-grid"></div>
+    </div>
+  </div>
+
+  <div id="obsidianMusicPill" class="obsidian-music-pill hidden" aria-label="Obsidian Now Playing">
+    <div class="obs-music-eq"><span></span><span></span><span></span></div>
+    <div class="obs-music-meta">
+      <div id="obsMusicTitle" class="obs-music-title">Now Playing</div>
+      <div id="obsMusicSub" class="obs-music-sub">0:00 / 0:00</div>
+    </div>
+    <div class="obs-music-btns">
+      <button id="btnObsMusicPrev" class="btn-secondary btn-xs">&#9664;&#9664;</button>
+      <button id="btnObsMusicToggle" class="btn-primary btn-xs">Pause</button>
+      <button id="btnObsMusicNext" class="btn-secondary btn-xs">&#9654;&#9654;</button>
+      <button id="btnObsMusicClose" class="btn-danger btn-xs">&times;</button>
+    </div>
+  </div>
+
+  <!-- Smooth Return-to-Launcher Transition -->
+  <div id="gameReturnTransition" class="game-return-transition hidden">
+    <div id="gameReturnBadge" class="game-return-badge">Returning to Launcher…</div>
+  </div>
+
+  <!-- Remote Update Gate / In-App Update Modal (Both Themes) -->
+  <div id="updatePromptModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" style="z-index:1100;">
+    <div class="update-modal-card">
+      <div id="updateModalBadge" class="update-badge-pill">⚡ Remote Update Required</div>
+      <h2 id="updateModalTitle" style="margin:0 0 8px; font-size:20px;">A New Launcher Update is Ready</h2>
+      <p id="updateModalDesc" class="hint-text" style="margin-bottom:10px;">
+        The launcher needs to update, close, install the new files, and relaunch.
+      </p>
+      <div id="updateProgressWrap" class="hidden">
+        <div class="update-progress-track">
+          <div id="updateProgressFill" class="update-progress-fill"></div>
+        </div>
+        <div id="updateProgressText" class="hint-text">Preparing update...</div>
+      </div>
+      <div id="updatePreviewChanges" style="margin-top:10px;">
+        <div class="whatsnew-section-title">What's Included</div>
+        <ul id="updateModalNotes" class="whatsnew-list"></ul>
+      </div>
+      <div class="modal-footer" style="margin-top:18px;">
+        <button type="button" id="btnUpdateLater" class="btn-secondary btn-sm">Later</button>
+        <button type="button" id="btnUpdateNow" class="btn-primary btn-sm">Update &amp; Relaunch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post-Update What's New & Fixes Screen (Both Themes) -->
+  <div id="whatsNewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" style="z-index:1090;">
+    <div class="whatsnew-modal-card">
+      <div class="update-badge-pill">✨ Update Complete</div>
+      <h2 id="whatsNewTitle" style="margin:0 0 6px; font-size:21px;">What's New &amp; Fixes</h2>
+      <p id="whatsNewSubtitle" class="hint-text" style="margin-bottom:8px;">Updated successfully.</p>
+      <div id="whatsNewNotesWrap">
+        <div class="whatsnew-section-title">New Features &amp; Improvements</div>
+        <ul id="whatsNewNotesList" class="whatsnew-list"></ul>
+      </div>
+      <div id="whatsNewFixesWrap">
+        <div class="whatsnew-section-title">Bug Fixes</div>
+        <ul id="whatsNewFixesList" class="whatsnew-list"></ul>
+      </div>
+      <div class="modal-footer" style="margin-top:18px;">
+        <button type="button" id="btnCloseWhatsNew" class="btn-primary btn-sm">Continue to Launcher</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unique PS3 XMB Install / Add Game Modal -->
+  <div id="ps3AddGameModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" style="z-index:1080;">
+    <div class="update-modal-card">
+      <div class="update-badge-pill">💿 PS3 Disc &amp; Package Installer</div>
+      <h2 style="margin:0 0 6px; font-size:20px;">Install Game to XMB</h2>
+      <p class="hint-text" style="margin-bottom:12px;">
+        Register a game executable or shortcut. PS3 XMB will auto-fetch HD artwork, back cover, manual, and trailer.
+      </p>
+      <form id="ps3AddGameForm" class="stack-form">
+        <div class="form-field">
+          <label for="ps3AddTitleInput">Game Title</label>
+          <input id="ps3AddTitleInput" type="text" class="text-input" required placeholder="e.g. Grand Theft Auto IV, Elden Ring..." />
+        </div>
+        <div class="form-field">
+          <label for="ps3AddExecInput">Executable (.exe / .lnk)</label>
+          <div class="input-with-btn">
+            <input id="ps3AddExecInput" type="text" class="text-input" placeholder="C:\Path\To\Game.exe" />
+            <button type="button" id="btnPs3AddBrowseExec" class="btn-secondary btn-sm">Browse…</button>
+          </div>
+          <div class="quick-exe-row" style="margin-top:4px;">
+            <button type="button" id="btnPs3DetectRoblox" class="btn-link">Detect Roblox Player (.exe)</button>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="ps3AddPlatformInput">Console / Format Badge</label>
+          <select id="ps3AddPlatformInput" class="select-input">
+            <option value="PS3">PS3 Blu-ray Disc</option>
+            <option value="PC DVD">PC Digital / DVD</option>
+            <option value="PS2">PS2 Classic</option>
+            <option value="PS1">PS1 Classic</option>
+            <option value="PSP">PSP Remaster</option>
+          </select>
+        </div>
+        <div id="ps3AddProgressWrap" class="hidden">
+          <div class="update-progress-track">
+            <div id="ps3AddProgressFill" class="update-progress-fill"></div>
+          </div>
+          <div id="ps3AddProgressText" class="hint-text">Preparing installation...</div>
+        </div>
+        <div class="modal-footer" style="margin-top:14px;">
+          <button type="button" id="btnPs3AddCancel" class="btn-secondary btn-sm">Cancel</button>
+          <button type="submit" id="btnPs3AddConfirm" class="btn-primary btn-sm">Install to XMB</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Immediate Rename Prompt After Unwrapping Sealed Case -->
+  <div id="renameModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Name Your Unwrapped Game</h2>
+        <button id="closeRenameModal" class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="renameForm" class="modal-body">
+        <p class="hint-text">Enter the game's name to automatically pull its HD cover, back cover, synopsis, manual, and YouTube trailer.</p>
+        <div class="form-field">
+          <label for="renameTitleInput">Game Title</label>
+          <input id="renameTitleInput" type="text" class="text-input" required placeholder="e.g. WWE '12, Elden Ring, Portal 2..." />
+        </div>
+        <div class="form-field">
+          <label for="renameExecInput">Executable (.exe) — optional</label>
+          <div class="input-with-btn">
+            <input id="renameExecInput" type="text" class="text-input" placeholder="C:\Path\To\Game.exe" />
+            <button type="button" id="btnRenameBrowseExec" class="btn-secondary btn-sm">Browse…</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnRenameCancel" class="btn-secondary btn-sm">Cancel</button>
+          <button type="submit" id="btnRenameConfirm" class="btn-primary btn-sm">Fetch Auto Data &amp; Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Authentic PS3 Trophy & Modern Achievement Notification Stack (Top Right) -->
+  <div id="achievementToastStack" class="achievement-toast-stack" aria-live="polite"></div>
+
+  <!-- Animated & Polished First-Run Onboarding Tutorial Modal -->
+  <div id="tutorialModal" class="tutorial-backdrop hidden" role="dialog" aria-modal="true" aria-label="Welcome Tutorial">
+    <div class="tutorial-card">
+      <div class="tutorial-glow-orb orb-1"></div>
+      <div class="tutorial-glow-orb orb-2"></div>
+      <div class="tutorial-header">
+        <div class="tutorial-step-pill" id="tutorialStepPill">STEP 1 OF 6</div>
+        <button id="btnSkipTutorial" class="tutorial-skip-btn">Skip Tutorial ✕</button>
+      </div>
+
+      <div class="tutorial-stage" id="tutorialStage">
+        <!-- Dynamically populated with animated visual showcase & explanation -->
+      </div>
+
+      <div class="tutorial-footer">
+        <div class="tutorial-dots" id="tutorialDots"></div>
+        <div class="tutorial-nav-btns">
+          <button id="btnTutorialPrev" class="btn-secondary btn-sm">← Back</button>
+          <button id="btnTutorialNext" class="btn-primary btn-sm">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

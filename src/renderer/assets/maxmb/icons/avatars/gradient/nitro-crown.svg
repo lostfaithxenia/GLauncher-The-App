@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff0844"/>
+      <stop offset="52%" stop-color="#ffb199"/>
+      <stop offset="100%" stop-color="#ff007f"/>
+    </linearGradient>
+    <linearGradient id="innerG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff007f"/>
+      <stop offset="100%" stop-color="#ff0844"/>
+    </linearGradient>
+    <linearGradient id="avatarBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98"/>
+      <stop offset="100%" stop-color="#e2e8f0" stop-opacity="0.82"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="64" fill="url(#bgG)"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="#ffffff" stroke-opacity="0.24" stroke-width="2.5"/>
+  <g filter="url(#glow)">
+    <circle cx="64" cy="52" r="22" fill="url(#avatarBody)"/>
+    <path d="M26 114 C26 88 42 78 64 78 C86 78 102 88 102 114" fill="url(#avatarBody)"/>
+    <path d="M40 42 L50 28 L64 40 L78 28 L88 42 Z" fill="#ffd700" stroke="#fff" stroke-width="2"/>
+  </g>
+</svg>

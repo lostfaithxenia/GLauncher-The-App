@@ -1,0 +1,8 @@
+node_modules/
+dist/
+ps3_pic/
+ps3_video/
+ps3_audio/
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,56 @@
+{
+  "name": "glauncher",
+  "version": "0.1.0-alpha.1",
+  "updateFeedUrl": "",
+  "description": "GLauncher Alpha — A tactile physical-media Windows game launcher featuring switchable Game CD and Game Case interfaces.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis portable dir",
+    "build:dir": "electron-builder --win dir"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12",
+    "three": "^0.187.0"
+  },
+  "build": {
+    "appId": "com.glauncher.app",
+    "productName": "GLauncher",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/bin",
+        "to": "bin"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable",
+        "dir"
+      ],
+      "icon": "build/icon.png",
+      "signExecutable": false
+    },
+    "nsis": {
+      "artifactName": "GLauncher-Alpha-Setup.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "GLauncher-Alpha-Portable.exe"
+    }
+  }
+}

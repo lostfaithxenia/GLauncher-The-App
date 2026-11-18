@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+  <title>Quick Power Menu</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+      color: #f1f5f9;
+      overflow: hidden;
+      user-select: none;
+    }
+    .panel {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      background: rgba(11, 14, 22, 0.94);
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(18px);
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      gap: 12px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: #7dd3fc;
+      text-transform: uppercase;
+    }
+    .game-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-top: 3px;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sub-timer {
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex: 1;
+    }
+    .menu-btn {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.045);
+      color: #f1f5f9;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+    .menu-btn:hover,
+    .menu-btn.focused {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: rgba(56, 189, 248, 0.65);
+      transform: translateX(2px);
+    }
+    .menu-btn.danger:hover,
+    .menu-btn.danger.focused {
+      background: rgba(239, 68, 68, 0.24);
+      border-color: rgba(239, 68, 68, 0.7);
+      color: #fecaca;
+    }
+    .menu-btn:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .key-hint {
+      font-size: 10.5px;
+      color: #64748b;
+      text-align: center;
+      padding-top: 4px;
+    }
+    .confirm-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .confirm-row button {
+      flex: 1;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+    .confirm-row button.focused {
+      outline: 2px solid #7dd3fc;
+      transform: translateY(-1px);
+    }
+    .pad-pill {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.16);
+      border: 1px solid rgba(125, 211, 252, 0.4);
+      color: #bae6fd;
+    }
+    .btn-yes { background: #ef4444; color: #fff; }
+    .btn-no { background: rgba(255, 255, 255, 0.1); color: #f1f5f9; }
+    .hidden { display: none !important; }
+
+    /* Authentic PS3 XMB In-Game System Overlay Theme */
+    @font-face {
+      font-family: "SCE-PS3-Rodin";
+      src: url("./assets/maxmb/fonts/SCE-PS3-RD-R-LATIN.TTF") format("truetype");
+    }
+    body.theme-xmb {
+      font-family: "SCE-PS3-Rodin", "Segoe UI", system-ui, sans-serif;
+    }
+    body.theme-xmb .panel {
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(32, 40, 56, 0.94) 0%, rgba(14, 18, 28, 0.96) 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      box-shadow: inset 0 1px 6px rgba(255, 255, 255, 0.25), 0 24px 60px rgba(0, 0, 0, 0.85);
+    }
+    body.theme-xmb .badge {
+      color: #e2e8f0;
+      letter-spacing: 0.08em;
+    }
+    body.theme-xmb .menu-btn {
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+    body.theme-xmb .menu-btn:hover,
+    body.theme-xmb .menu-btn.focused {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
+      border-color: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 0 14px rgba(255, 255, 255, 0.22);
+    }
+    body.theme-xmb .pad-pill {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.42);
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="header">
+      <div>
+        <div class="badge">Quick Power Menu</div>
+        <div id="gameName" class="game-title">No Active Game</div>
+        <div id="gameMeta" class="sub-timer">Launcher Ready</div>
+      </div>
+      <span id="padBadge" class="pad-pill">PAD READY</span>
+    </div>
+
+    <div id="menuList" class="menu-list">
+      <button class="menu-btn focused" data-action="resume">
+        <span>Resume</span><span>Esc / Insert</span>
+      </button>
+      <button id="btnCloseGame" class="menu-btn danger" data-action="closeGame">
+        <span>Quick Close Game</span><span>✕</span>
+      </button>
+      <button id="btnRestartGame" class="menu-btn" data-action="restartGame">
+        <span>Restart Game</span><span>↻</span>
+      </button>
+      <button class="menu-btn" data-action="showLauncher">
+        <span>Open Launcher</span><span>⌂</span>
+      </button>
+      <button class="menu-btn" data-action="sleep">
+        <span>Sleep Device</span><span>☾</span>
+      </button>
+      <button class="menu-btn danger" data-action="restart">
+        <span>Restart Device</span><span>⟲</span>
+      </button>
+      <button class="menu-btn danger" data-action="shutdown">
+        <span>Shut Down Device</span><span>⏻</span>
+      </button>
+    </div>
+
+    <div id="confirmBox" class="hidden">
+      <div id="confirmLabel" style="font-size:12.5px; color:#fca5a5; text-align:center; margin-bottom:6px;">
+        Confirm device power action?
+      </div>
+      <div class="confirm-row">
+        <button id="btnConfirmCancel" class="btn-no">Cancel</button>
+        <button id="btnConfirmYes" class="btn-yes">Confirm</button>
+      </div>
+    </div>
+
+    <div class="key-hint">D-Pad / Stick Move • A / ✕ Select • B / ○ Back • Guide / Insert Close</div>
+  </div>
+
+  <script type="module" src="overlay.js"></script>
+</body>
+</html>
