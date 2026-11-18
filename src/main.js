@@ -124,27 +124,52 @@ function getBinPath(exeName) {
   return null;
 }
 
+function fileUrlExists(val) {
+  const s = String(val || '').trim();
+  if (!s) return false;
+  if (!s.startsWith('file:///')) return true;
+  try {
+    const localPath = decodeURIComponent(s.slice(8)).replace(/\//g, '\\');
+    return fs.existsSync(localPath);
+  } catch {
+    return false;
+  }
+}
+
 function sanitizeStore(parsed) {
   const needsV2Upgrade = !parsed?.schemaVersion || parsed.schemaVersion < 2;
   const needsFakeCleanup = !parsed?.schemaVersion || parsed.schemaVersion < 6;
   const profiles = Array.isArray(parsed?.profiles) && parsed.profiles.length > 0
     ? parsed.profiles.map((p, idx) => {
         const mergedSettings = { ...DEFAULT_SETTINGS, ...(p.settings || {}) };
+        if (mergedSettings.xmbWallpaper && !fileUrlExists(mergedSettings.xmbWallpaper)) {
+          mergedSettings.xmbWallpaper = '';
+        }
         if (needsV2Upgrade) {
           mergedSettings.renderMode = '3d';
         }
         const rawGames = Array.isArray(p.games) ? p.games : [];
         const withoutBogus = rawGames.filter((g) => !/spike\s+video\s+game\s+awards/i.test(String(g?.title || '')));
-        const cleanGames = needsFakeCleanup ? withoutBogus.filter((g) => !g.isDemo) : withoutBogus;
+        const cleanGames = (needsFakeCleanup ? withoutBogus.filter((g) => !g.isDemo) : withoutBogus).map((g) => ({
+          ...g,
+          artwork: fileUrlExists(g.artwork) ? g.artwork : '',
+          backArtwork: fileUrlExists(g.backArtwork) ? g.backArtwork : ''
+        }));
         const cleanRoles = Array.isArray(p.roles) && p.roles.length > 0 ? p.roles : [...DEFAULT_ROLES];
+        const safeAvatar = fileUrlExists(p.avatar) ? String(p.avatar) : './assets/maxmb/icons/avatars/firmware/000.png';
+        const rawBanner = String(p.banner || '');
+        const bannerUrlMatch = rawBanner.match(/url\(["']?(file:\/\/\/[^"')]+)["']?\)/i);
+        const safeBanner = bannerUrlMatch && !fileUrlExists(bannerUrlMatch[1])
+          ? 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)'
+          : (rawBanner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)');
         return {
           id: String(p.id || `profile-${idx + 1}`),
           name: String(p.name || `Player ${idx + 1}`).slice(0, 28),
           handle: String(p.handle || `@${String(p.name || `player${idx + 1}`).toLowerCase().replace(/[^a-z0-9_]/g, '')}`),
           pronouns: String(p.pronouns || '').slice(0, 24),
           color: String(p.color || '#38bdf8'),
-          avatar: String(p.avatar || './assets/maxmb/icons/avatars/firmware/000.png'),
-          banner: String(p.banner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)'),
+          avatar: safeAvatar,
+          banner: safeBanner,
           profilePrimaryColor: String(p.profilePrimaryColor || '#1e1b4b'),
           profileAccentColor: String(p.profileAccentColor || p.color || '#38bdf8'),
           profileEffect: String(p.profileEffect || 'none'),
