@@ -144,6 +144,19 @@ function sanitizeStore(parsed) {
           color: String(p.color || '#38bdf8'),
           avatar: String(p.avatar || './assets/maxmb/icons/avatars/firmware/000.png'),
           banner: String(p.banner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)'),
+          profilePrimaryColor: String(p.profilePrimaryColor || '#1e1b4b'),
+          profileAccentColor: String(p.profileAccentColor || p.color || '#38bdf8'),
+          badges: Array.isArray(p.badges) ? p.badges.slice(0, 12) : ['alpha-pioneer'],
+          friends: Array.isArray(p.friends)
+            ? p.friends
+                .filter((f) => f && f.handle)
+                .map((f) => ({
+                  handle: String(f.handle).startsWith('@') ? String(f.handle).toLowerCase() : `@${String(f.handle).toLowerCase()}`,
+                  nickname: String(f.nickname || '').slice(0, 28),
+                  addedAt: f.addedAt || new Date().toISOString()
+                }))
+                .slice(0, 60)
+            : [],
           status: String(p.status || 'online'),
           customStatus: String(p.customStatus ?? 'Playing on Physical Media Stage').slice(0, 80),
           bio: String(p.bio ?? 'Collector of physical discs, PS3 XMB enthusiast & achievement hunter.').slice(0, 240),
@@ -847,9 +860,64 @@ function startProcessWatch(exeName) {
   }, 2500);
 }
 
+let activeVcState = { active: false, roomId: '', participants: [] };
+let vcHudWindow = null;
+
+function createVcHudWindow() {
+  if (vcHudWindow && !vcHudWindow.isDestroyed()) return vcHudWindow;
+  vcHudWindow = new BrowserWindow({
+    width: 280,
+    height: 260,
+    x: 18,
+    y: 18,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  vcHudWindow.setIgnoreMouseEvents(true, { forward: true });
+  vcHudWindow.setAlwaysOnTop(true, 'screen-saver');
+  vcHudWindow.loadFile(path.join(__dirname, 'renderer', 'vc-hud.html'));
+  vcHudWindow.on('closed', () => { vcHudWindow = null; });
+  return vcHudWindow;
+}
+
+function syncVcHudWindow() {
+  const showHud = Boolean(runningGame && activeVcState.active && Array.isArray(activeVcState.participants) && activeVcState.participants.length > 0);
+  if (!showHud) {
+    if (vcHudWindow && !vcHudWindow.isDestroyed() && vcHudWindow.isVisible()) {
+      vcHudWindow.hide();
+    }
+    return;
+  }
+  const win = createVcHudWindow();
+  if (!win.isVisible()) win.showInactive();
+  if (!win.webContents.isLoading()) {
+    win.webContents.send('vc:state', activeVcState);
+  } else {
+    win.webContents.once('did-finish-load', () => {
+      win.webContents.send('vc:state', activeVcState);
+    });
+  }
+}
+
 function sendOverlayState() {
-  if (!overlayWindow || overlayWindow.isDestroyed()) return;
-  overlayWindow.webContents.send('overlay:state', { runningGame, theme: activeOverlayTheme });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('game:runningChanged', runningGame);
+  }
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('overlay:state', { runningGame, theme: activeOverlayTheme, vcState: activeVcState });
+  }
+  syncVcHudWindow();
 }
 
 function togglePowerOverlay(forceShow = null) {
@@ -1349,6 +1417,10 @@ ipcMain.handle('dialog:pickGame', async () => {
   let suggestedTitle = path.basename(filePath, path.extname(filePath));
   if (/^robloxplayer(beta|launcher)$/i.test(suggestedTitle) || /\\Roblox\\Versions\\/i.test(filePath)) {
     suggestedTitle = 'Roblox';
+  } else if (/^minecraftlauncher$/i.test(suggestedTitle) || /^minecraft$/i.test(suggestedTitle)) {
+    suggestedTitle = 'Minecraft';
+  } else if (/^tlauncher$/i.test(suggestedTitle)) {
+    suggestedTitle = 'TLauncher';
   }
   return { filePath, suggestedTitle };
 });
@@ -1635,6 +1707,19 @@ ipcMain.handle('artwork:searchCover', async (_event, title) => {
       steamTrailerUrl: ''
     };
   }
+  if (!res?.ok && /\b(minecraft|tlauncher)\b/i.test(String(title || ''))) {
+    const isTl = /\btlauncher\b/i.test(String(title || ''));
+    return {
+      ok: true,
+      matchedTitle: isTl ? 'TLauncher (Minecraft)' : 'Minecraft',
+      artwork: res?.artwork || '',
+      backArtwork: res?.backArtwork || '',
+      synopsis: res?.synopsis || 'Explore infinite blocky worlds, mine resources, craft tools, and build anything you can imagine.',
+      genre: res?.genre || 'Sandbox / Survival',
+      year: res?.year || '2009',
+      steamTrailerUrl: ''
+    };
+  }
   return res;
 });
 
@@ -1681,6 +1766,42 @@ ipcMain.handle('game:findRobloxExe', async () => {
   }
   return { ok: false, filePath: '', suggestedTitle: 'Roblox' };
 });
+
+ipcMain.handle('game:findMinecraftExe', async () => {
+  const candidates = [
+    process.env.LOCALAPPDATA ? { path: path.join(process.env.LOCALAPPDATA, 'Programs', 'Minecraft Launcher', 'MinecraftLauncher.exe'), title: 'Minecraft', kind: 'Minecraft Launcher' } : null,
+    process.env['ProgramFiles(x86)'] ? { path: path.join(process.env['ProgramFiles(x86)'], 'Minecraft Launcher', 'MinecraftLauncher.exe'), title: 'Minecraft', kind: 'Minecraft Launcher' } : null,
+    process.env.ProgramFiles ? { path: path.join(process.env.ProgramFiles, 'Minecraft Launcher', 'MinecraftLauncher.exe'), title: 'Minecraft', kind: 'Minecraft Launcher' } : null,
+    { path: 'C:\\XboxGames\\Minecraft Launcher\\Content\\Minecraft.exe', title: 'Minecraft', kind: 'Minecraft (Xbox)' },
+    process.env.APPDATA ? { path: path.join(process.env.APPDATA, '.tlauncher', 'TLauncher.exe'), title: 'TLauncher', kind: 'TLauncher' } : null,
+    process.env.APPDATA ? { path: path.join(process.env.APPDATA, '.minecraft', 'TLauncher.exe'), title: 'TLauncher', kind: 'TLauncher' } : null,
+    process.env.USERPROFILE ? { path: path.join(process.env.USERPROFILE, 'Desktop', 'TLauncher.exe'), title: 'TLauncher', kind: 'TLauncher' } : null,
+    process.env.USERPROFILE ? { path: path.join(process.env.USERPROFILE, 'Downloads', 'TLauncher.exe'), title: 'TLauncher', kind: 'TLauncher' } : null
+  ].filter(Boolean);
+
+  const found = [];
+  for (const c of candidates) {
+    if (fs.existsSync(c.path)) {
+      found.push({ filePath: c.path, suggestedTitle: c.title, kind: c.kind });
+    }
+  }
+  if (found.length > 0) {
+    return { ok: true, filePath: found[0].filePath, suggestedTitle: found[0].suggestedTitle, kind: found[0].kind, found };
+  }
+  return { ok: false, filePath: '', suggestedTitle: 'Minecraft', found: [] };
+});
+
+ipcMain.handle('vc:updateState', (_event, vcState) => {
+  activeVcState = {
+    active: Boolean(vcState?.active),
+    roomId: String(vcState?.roomId || ''),
+    participants: Array.isArray(vcState?.participants) ? vcState.participants : []
+  };
+  sendOverlayState();
+  return true;
+});
+
+ipcMain.handle('vc:getState', () => activeVcState);
 
 ipcMain.handle('manual:fetch', async (_event, title) => fetchOfficialManualPages(title));
 ipcMain.handle('trailer:fetch', async () => null);

@@ -1,5 +1,6 @@
 import { Stage3D } from './stage3d.js';
 import { BackdropRenderer, XMB_BG_COLORS } from './backdrop.js';
+import { SocialClient, normalizeHandle } from './social.js';
 import { XmbAudio, runPs3Intro, cancelPs3Intro, runPs3GameLaunchSplash } from './xmb-media.js';
 
 const api = window.launcherAPI;
@@ -33,6 +34,9 @@ const state = {
 let stage3d = null;
 let backdrop = null;
 let resizeObserver = null;
+let socialClient = null;
+let musicShuffle = false;
+let musicRepeat = false;
 let toastTimer = null;
 let xmbHoverVideoTimer = null;
 let xmbActiveVideoGameId = null;
@@ -40,6 +44,7 @@ const xmbAutoFetchSet = new Set();
 
 const els = {
   backdropCanvas: document.getElementById('backdropCanvas'),
+  appStartupSplash: document.getElementById('appStartupSplash'),
   obsidianHeroBackdrop: document.getElementById('obsidianHeroBackdrop'),
   brandTitle: document.getElementById('brandTitle'),
   btnTitlebarTutorial: document.getElementById('btnTitlebarTutorial'),
@@ -99,10 +104,14 @@ const els = {
   xmbMusicBar: document.getElementById('xmbMusicBar'),
   xmbMusicTitle: document.getElementById('xmbMusicTitle'),
   xmbMusicTime: document.getElementById('xmbMusicTime'),
+  xmbMusicSeek: document.getElementById('xmbMusicSeek'),
+  xmbMusicVol: document.getElementById('xmbMusicVol'),
   xmbAudioPlayerEl: document.getElementById('xmbAudioPlayerEl'),
+  btnXmbMusicShuffle: document.getElementById('btnXmbMusicShuffle'),
   btnXmbMusicPrev: document.getElementById('btnXmbMusicPrev'),
   btnXmbMusicToggle: document.getElementById('btnXmbMusicToggle'),
   btnXmbMusicNext: document.getElementById('btnXmbMusicNext'),
+  btnXmbMusicRepeat: document.getElementById('btnXmbMusicRepeat'),
   btnXmbMusicClose: document.getElementById('btnXmbMusicClose'),
 
   xmbMediaFolderPrompt: document.getElementById('xmbMediaFolderPrompt'),
@@ -116,6 +125,10 @@ const els = {
   obsidianMusicPill: document.getElementById('obsidianMusicPill'),
   obsMusicTitle: document.getElementById('obsMusicTitle'),
   obsMusicSub: document.getElementById('obsMusicSub'),
+  obsMusicSeek: document.getElementById('obsMusicSeek'),
+  obsMusicVol: document.getElementById('obsMusicVol'),
+  btnObsMusicShuffle: document.getElementById('btnObsMusicShuffle'),
+  btnObsMusicRepeat: document.getElementById('btnObsMusicRepeat'),
   btnObsMusicPrev: document.getElementById('btnObsMusicPrev'),
   btnObsMusicToggle: document.getElementById('btnObsMusicToggle'),
   btnObsMusicNext: document.getElementById('btnObsMusicNext'),
@@ -226,9 +239,22 @@ const els = {
     display: document.getElementById('tab-display'),
     library: document.getElementById('tab-library'),
     profiles: document.getElementById('tab-profiles'),
+    friends: document.getElementById('tab-friends'),
     trophies: document.getElementById('tab-trophies'),
     launcher: document.getElementById('tab-launcher')
   },
+
+  // Friends & VC Tab
+  addFriendHandleInput: document.getElementById('addFriendHandleInput'),
+  btnAddFriend: document.getElementById('btnAddFriend'),
+  friendsListContainer: document.getElementById('friendsListContainer'),
+  socialConnBadge: document.getElementById('socialConnBadge'),
+  vcActiveBanner: document.getElementById('vcActiveBanner'),
+  vcIdleHint: document.getElementById('vcIdleHint'),
+  vcParticipantsList: document.getElementById('vcParticipantsList'),
+  btnVcMute: document.getElementById('btnVcMute'),
+  btnVcDeafen: document.getElementById('btnVcDeafen'),
+  btnVcLeave: document.getElementById('btnVcLeave'),
 
   // Display Tab
   btnQuickThemeObsidian: document.getElementById('btnQuickThemeObsidian'),
@@ -267,10 +293,12 @@ const els = {
   fieldExec: document.getElementById('fieldExec'),
   btnBrowseExec: document.getElementById('btnBrowseExec'),
   btnDetectRoblox: document.getElementById('btnDetectRoblox'),
+  btnDetectMinecraft: document.getElementById('btnDetectMinecraft'),
   btnTestNotepadExe: document.getElementById('btnTestNotepadExe'),
   btnXmbRefresh: document.getElementById('btnXmbRefresh'),
   btnDrawerRefresh: document.getElementById('btnDrawerRefresh'),
   btnPs3DetectRoblox: document.getElementById('btnPs3DetectRoblox'),
+  btnPs3DetectMinecraft: document.getElementById('btnPs3DetectMinecraft'),
   btnOpenGameFolder: document.getElementById('btnOpenGameFolder'),
   fieldArtwork: document.getElementById('fieldArtwork'),
   coverDropZone: document.getElementById('coverDropZone'),
@@ -312,9 +340,13 @@ const els = {
   profileVfxSelect: document.getElementById('profileVfxSelect'),
   profileHandleInput: document.getElementById('profileHandleInput'),
   profileBannerPreset: document.getElementById('profileBannerPreset'),
+  btnPickBannerImg: document.getElementById('btnPickBannerImg'),
+  profilePrimaryColorInput: document.getElementById('profilePrimaryColorInput'),
+  profileAccentColorInput: document.getElementById('profileAccentColorInput'),
   profileCustomStatusInput: document.getElementById('profileCustomStatusInput'),
   profileBioInput: document.getElementById('profileBioInput'),
   profileRolesEditorList: document.getElementById('profileRolesEditorList'),
+  newRoleIconInput: document.getElementById('newRoleIconInput'),
   newRoleNameInput: document.getElementById('newRoleNameInput'),
   newRoleTierSelect: document.getElementById('newRoleTierSelect'),
   newRoleColorInput: document.getElementById('newRoleColorInput'),
@@ -444,6 +476,7 @@ async function persist() {
     activeProfileId: state.activeProfileId,
     profiles: state.profiles
   });
+  socialClient?.setProfileAndGame(activeProfile(), currentRunningGame);
 }
 
 // =========================================================
@@ -850,6 +883,12 @@ function renderProfileCardAndHud() {
   }
 
   // 2. Animated Profile Popover Card
+  if (els.profileCardPopover) {
+    const pPrimary = profile.profilePrimaryColor || '#1e1b4b';
+    const pAccent = profile.profileAccentColor || profile.color || '#38bdf8';
+    els.profileCardPopover.style.background = `linear-gradient(165deg, ${pPrimary}ee 0%, #090c16f7 68%)`;
+    els.profileCardPopover.style.borderColor = `${pAccent}66`;
+  }
   if (els.profileBannerEl) {
     const b = profile.banner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)';
     els.profileBannerEl.style.background = b;
@@ -1406,7 +1445,9 @@ function renderDrawer() {
     if (panel) panel.classList.toggle('hidden', key !== state.activeTab);
   });
 
-  if (state.activeTab === 'display') {
+  if (state.activeTab === 'friends') {
+    renderFriendsTab();
+  } else if (state.activeTab === 'display') {
     syncDisplayControls();
   } else if (state.activeTab === 'library') {
     syncGameFormToSelected();
@@ -2382,39 +2423,62 @@ function getXmbItemsForCategory(catId) {
   if (catId === 'friends') {
     const p = activeProfile();
     const stats = computeTrophyStats(p);
-    return [
+    const myPresence = socialClient?.runningGame?.title ? `Playing ${socialClient.runningGame.title}` : 'Just browsing';
+    const friendsList = socialClient ? socialClient.getFriendsSnapshot() : [];
+    const vcSt = socialClient ? socialClient.getVcState() : { active: false, participants: [] };
+
+    const items = [
       {
         id: 'friend-self-card',
         kind: 'user',
         activeUser: true,
         title: `${p.name} (${p.handle || '@player1'})`,
-        sub: `★ Trophy Level ${stats.level} • "${p.psnComment || p.customStatus || 'Online'}"`,
+        sub: `${myPresence} • ★ Trophy Level ${stats.level}`,
         art: p.avatar || './assets/maxmb/icons/avatars/firmware/000.png',
         setVal: `🏆 ${stats.total}`,
         action: () => openOptionsDrawer('profiles')
       },
       {
-        id: 'friend-avatar-picker',
+        id: 'friend-manage-online',
         kind: 'system',
-        title: 'PSN & Firmware 4.93 Avatar Gallery (90+ Avatars)',
-        sub: 'Choose from Official PS3 Firmware Avatars, MaXMB PSN Avatars & Gradient Icons',
+        title: 'Add Friend / Open Friends & Voice Chat',
+        sub: `${friendsList.filter((f) => f.status !== 'offline').length} online • ${friendsList.length} total friends`,
         iconPng: 'assets/maxmb/icons/theme/icon_friend_add.png',
-        action: () => {
-          openOptionsDrawer('profiles');
-          els.avatarGalleryBox?.classList.remove('hidden');
-          state.avatarGalleryTab = 'psn';
-          renderAvatarGallery();
-        }
-      },
-      {
-        id: 'friend-roles',
-        kind: 'system',
-        title: 'Customize PSN Player Card & Super Roles',
-        sub: `Active Roles: ${(p.roles || []).map((r) => r.name).join(', ') || 'None'}`,
-        iconPng: 'assets/maxmb/icons/theme/icon_chatroom.png',
-        action: () => openOptionsDrawer('profiles')
+        action: () => openOptionsDrawer('friends')
       }
     ];
+
+    if (vcSt.active) {
+      items.push({
+        id: 'friend-vc-active',
+        kind: 'system',
+        title: `Voice Chat Active (${vcSt.participants.length} in call)`,
+        sub: vcSt.participants.map((u) => `${u.name}${u.speaking ? ' 🔊' : ''}`).join(', '),
+        iconPng: 'assets/maxmb/icons/theme/icon_chatroom.png',
+        action: () => openOptionsDrawer('friends')
+      });
+    }
+
+    friendsList.forEach((f) => {
+      items.push({
+        id: `friend-${f.handle}`,
+        kind: 'user',
+        title: `${f.name} (${f.handle})`,
+        sub: f.status === 'offline' ? 'Offline' : `${f.activity || 'Just browsing'}${f.inVc ? ' • In Voice Chat' : ''}`,
+        art: f.avatar || './assets/maxmb/icons/avatars/firmware/000.png',
+        setVal: f.status === 'offline' ? 'Offline' : (f.gameTitle ? 'In-Game' : 'Online'),
+        action: () => {
+          if (f.status === 'offline') {
+            showToast(`${f.name} is currently offline`);
+          } else {
+            socialClient?.callFriend(f.handle);
+            showToast(`Calling ${f.name} (${f.handle})...`);
+          }
+        }
+      });
+    });
+
+    return items;
   }
 
   // 'game' category: Saved Data Utility + real user games + Install / Add Game (no trophies here)
@@ -3076,6 +3140,12 @@ function cleanExeTitle(rawName) {
   if (/^roblox\s*player\s*(beta|launcher)?$/i.test(base)) {
     return 'Roblox';
   }
+  if (/^minecraft\s*launcher$/i.test(base) || /^minecraft$/i.test(base)) {
+    return 'Minecraft';
+  }
+  if (/^t\s*launcher$/i.test(base)) {
+    return 'TLauncher';
+  }
   return base;
 }
 
@@ -3637,18 +3707,73 @@ function bindEvents() {
   });
 
   els.xmbAudioPlayerEl?.addEventListener('timeupdate', () => {
-    if (!els.xmbMusicTime || !els.xmbAudioPlayerEl) return;
+    if (!els.xmbAudioPlayerEl) return;
+    const cur = els.xmbAudioPlayerEl.currentTime || 0;
+    const dur = els.xmbAudioPlayerEl.duration || 0;
     const fmt = (s) => {
       if (!Number.isFinite(s)) return '0:00';
       const m = Math.floor(s / 60);
       const sec = String(Math.floor(s % 60)).padStart(2, '0');
       return `${m}:${sec}`;
     };
-    els.xmbMusicTime.textContent = `${fmt(els.xmbAudioPlayerEl.currentTime)} / ${fmt(els.xmbAudioPlayerEl.duration)}`;
+    const timeStr = `${fmt(cur)} / ${fmt(dur)}`;
+    if (els.xmbMusicTime) els.xmbMusicTime.textContent = timeStr;
+    if (els.obsMusicSub) {
+      const track = musicPlaylist[musicTrackIdx];
+      const meta = [track?.artist, track?.album].filter(Boolean).join(' • ');
+      els.obsMusicSub.textContent = meta ? `${meta} • ${timeStr}` : timeStr;
+    }
+    const pct = dur > 0 ? Math.round((cur / dur) * 100) : 0;
+    if (els.xmbMusicSeek) els.xmbMusicSeek.value = String(pct);
+    if (els.obsMusicSeek) els.obsMusicSeek.value = String(pct);
   });
+
+  const handleSeek = (val) => {
+    const dur = els.xmbAudioPlayerEl?.duration || 0;
+    if (dur > 0 && els.xmbAudioPlayerEl) {
+      els.xmbAudioPlayerEl.currentTime = (Number(val) / 100) * dur;
+    }
+  };
+  els.xmbMusicSeek?.addEventListener('input', (e) => handleSeek(e.target.value));
+  els.obsMusicSeek?.addEventListener('input', (e) => handleSeek(e.target.value));
+
+  const handleVol = (val) => {
+    const v = Math.max(0, Math.min(1, Number(val) / 100));
+    if (els.xmbAudioPlayerEl) els.xmbAudioPlayerEl.volume = v;
+    if (els.xmbMusicVol) els.xmbMusicVol.value = String(val);
+    if (els.obsMusicVol) els.obsMusicVol.value = String(val);
+  };
+  els.xmbMusicVol?.addEventListener('input', (e) => handleVol(e.target.value));
+  els.obsMusicVol?.addEventListener('input', (e) => handleVol(e.target.value));
+
+  const toggleShuffle = () => {
+    musicShuffle = !musicShuffle;
+    els.btnXmbMusicShuffle?.classList.toggle('active', musicShuffle);
+    els.btnObsMusicShuffle?.classList.toggle('active', musicShuffle);
+    showToast(musicShuffle ? 'Music Shuffle: ON' : 'Music Shuffle: OFF');
+  };
+  const toggleRepeat = () => {
+    musicRepeat = !musicRepeat;
+    els.btnXmbMusicRepeat?.classList.toggle('active', musicRepeat);
+    els.btnObsMusicRepeat?.classList.toggle('active', musicRepeat);
+    showToast(musicRepeat ? 'Music Repeat: ON' : 'Music Repeat: OFF');
+  };
+  els.btnXmbMusicShuffle?.addEventListener('click', toggleShuffle);
+  els.btnObsMusicShuffle?.addEventListener('click', toggleShuffle);
+  els.btnXmbMusicRepeat?.addEventListener('click', toggleRepeat);
+  els.btnObsMusicRepeat?.addEventListener('click', toggleRepeat);
+
   els.xmbAudioPlayerEl?.addEventListener('ended', () => {
-    if (musicPlaylist.length > 1) playXmbMusicTrack(musicPlaylist, musicTrackIdx + 1);
-    else syncMusicBarsUi();
+    if (musicRepeat) {
+      playXmbMusicTrack(musicPlaylist, musicTrackIdx);
+    } else if (musicShuffle && musicPlaylist.length > 1) {
+      const nextIdx = Math.floor(Math.random() * musicPlaylist.length);
+      playXmbMusicTrack(musicPlaylist, nextIdx);
+    } else if (musicPlaylist.length > 1) {
+      playXmbMusicTrack(musicPlaylist, musicTrackIdx + 1);
+    } else {
+      syncMusicBarsUi();
+    }
   });
 
   els.btnCreatePs3FoldersPrompt?.addEventListener('click', async () => {
@@ -3708,6 +3833,9 @@ function bindEvents() {
       } else if (r === 'trophies') {
         if (state.drawerOpen && state.activeTab === 'trophies') closeOptionsDrawer();
         else openOptionsDrawer('trophies');
+      } else if (r === 'friends') {
+        if (state.drawerOpen && state.activeTab === 'friends') closeOptionsDrawer();
+        else openOptionsDrawer('friends');
       } else if (r === 'profile') {
         if (state.drawerOpen && state.activeTab === 'profiles') closeOptionsDrawer();
         else openOptionsDrawer('profiles');
@@ -4171,6 +4299,40 @@ function bindEvents() {
     }
   });
 
+  els.btnDetectMinecraft?.addEventListener('click', async () => {
+    const res = await api.findMinecraftExe();
+    if (res?.ok && res.filePath) {
+      els.fieldExec.value = res.filePath;
+      if (!els.fieldTitle.value.trim()) els.fieldTitle.value = res.suggestedTitle || 'Minecraft';
+      showToast(`Detected ${res.kind || 'Minecraft'}!`);
+    } else {
+      showToast('Minecraft / TLauncher not found in default paths — select the .exe manually');
+      const picked = await api.pickGameFile();
+      if (picked) {
+        els.fieldExec.value = picked.filePath;
+        if (!els.fieldTitle.value.trim()) els.fieldTitle.value = cleanExeTitle(picked.suggestedTitle) || 'Minecraft';
+      }
+    }
+  });
+
+  els.btnPs3DetectMinecraft?.addEventListener('click', async () => {
+    const res = await api.findMinecraftExe();
+    if (res?.ok && res.filePath) {
+      if (els.ps3AddExecInput) els.ps3AddExecInput.value = res.filePath;
+      if (els.ps3AddTitleInput && !els.ps3AddTitleInput.value.trim()) els.ps3AddTitleInput.value = res.suggestedTitle || 'Minecraft';
+      showToast(`Detected ${res.kind || 'Minecraft'}!`);
+    } else {
+      showToast('Minecraft / TLauncher not found in default paths — select the .exe manually');
+      const picked = await api.pickGameFile();
+      if (picked) {
+        if (els.ps3AddExecInput) els.ps3AddExecInput.value = picked.filePath;
+        if (els.ps3AddTitleInput && !els.ps3AddTitleInput.value.trim()) {
+          els.ps3AddTitleInput.value = cleanExeTitle(picked.suggestedTitle) || 'Minecraft';
+        }
+      }
+    }
+  });
+
   els.btnTestNotepadExe.addEventListener('click', () => {
     els.fieldExec.value = 'C:\\Windows\\System32\\notepad.exe';
     if (!els.fieldTitle.value.trim()) {
@@ -4476,12 +4638,59 @@ function bindEvents() {
     render();
   });
 
+  els.btnPickBannerImg?.addEventListener('click', async () => {
+    const imgUrl = await api.pickImageFile();
+    if (!imgUrl) return;
+    activeProfile().banner = `url("${imgUrl}")`;
+    await persist();
+    render();
+    showToast('Custom profile banner applied!');
+  });
+
+  els.profilePrimaryColorInput?.addEventListener('input', async () => {
+    activeProfile().profilePrimaryColor = els.profilePrimaryColorInput.value;
+    renderProfileCardAndHud();
+    await persist();
+  });
+
+  els.profileAccentColorInput?.addEventListener('input', async () => {
+    activeProfile().profileAccentColor = els.profileAccentColorInput.value;
+    renderProfileCardAndHud();
+    await persist();
+  });
+
+  document.querySelectorAll('.quick-role-preset').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const profile = activeProfile();
+      if (!Array.isArray(profile.roles)) profile.roles = [];
+      const rName = btn.dataset.rname || 'Member';
+      const rIcon = btn.dataset.ricon || '★';
+      const fullName = `${rIcon} ${rName}`.trim();
+      if (profile.roles.some((r) => r.name === fullName)) {
+        showToast(`Role "${fullName}" already added`);
+        return;
+      }
+      profile.roles.push({
+        id: `role-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+        name: fullName,
+        color: btn.dataset.rcolor || '#38bdf8',
+        tier: btn.dataset.rtier || 'standard'
+      });
+      await persist();
+      render();
+      renderProfileRolesEditor();
+      showToast(`Added Role "${fullName}"`);
+    });
+  });
+
   els.btnAddProfileRole?.addEventListener('click', async () => {
-    const name = els.newRoleNameInput?.value.trim();
-    if (!name) {
+    const rawName = els.newRoleNameInput?.value.trim();
+    const icon = els.newRoleIconInput?.value.trim() || '';
+    if (!rawName) {
       showToast('Enter a role name first');
       return;
     }
+    const name = icon ? `${icon} ${rawName}` : rawName;
     const color = els.newRoleColorInput?.value || '#38bdf8';
     const tier = els.newRoleTierSelect?.value || 'standard';
     const profile = activeProfile();
@@ -4493,6 +4702,7 @@ function bindEvents() {
       tier
     });
     if (els.newRoleNameInput) els.newRoleNameInput.value = '';
+    if (els.newRoleIconInput) els.newRoleIconInput.value = '';
     await persist();
     render();
     renderProfileRolesEditor();
@@ -5466,19 +5676,27 @@ async function init() {
   state.tutorialCompleted = Boolean(store.tutorialCompleted);
   state.selectedId = activeGames()[0]?.id || null;
 
-  // Always open in Obsidian theme by default on startup
-  if (activeSettings().theme !== 'obsidian') {
+  // Keep user's chosen theme across boots (default to obsidian only if unset)
+  if (!activeSettings().theme) {
     activeSettings().theme = 'obsidian';
-    if (activeSettings().backdropMode === 'xmb-wave') {
-      activeSettings().backdropMode = 'aurora';
-    }
     await persist();
   }
 
   await refreshDeviceMedia();
   bindEvents();
   initSpotlightSurfaces();
+  initSocialAndVc();
   render();
+
+  // App-wide non-blocking startup splash reveal
+  if (els.appStartupSplash) {
+    const dismissSplash = () => {
+      els.appStartupSplash?.classList.add('fade-out');
+      setTimeout(() => els.appStartupSplash?.classList.add('hidden'), 480);
+    };
+    setTimeout(dismissSplash, 1150);
+    els.appStartupSplash.addEventListener('click', dismissSplash, { once: true });
+  }
 
   // Tutorial never interferes with PS3 intro: if intro is running, wait until it finishes
   if (!state.tutorialCompleted) {
@@ -5523,3 +5741,190 @@ async function init() {
 }
 
 init();
+
+// =========================================================
+// ONLINE FRIENDS, RICH PRESENCE & WEBRTC VOICE CHAT
+// =========================================================
+let currentRunningGame = null;
+
+function renderVcBanner() {
+  if (!socialClient) return;
+  const st = socialClient.getVcState();
+  if (els.vcActiveBanner) els.vcActiveBanner.classList.toggle('hidden', !st.active);
+  if (els.vcIdleHint) els.vcIdleHint.classList.toggle('hidden', st.active);
+
+  if (els.vcParticipantsList) {
+    els.vcParticipantsList.innerHTML = '';
+    st.participants.forEach((p) => {
+      const chip = document.createElement('div');
+      chip.className = `vc-chip${p.speaking ? ' speaking' : ''}`;
+      const img = document.createElement('img');
+      img.src = p.avatar || './assets/maxmb/icons/avatars/firmware/000.png';
+      img.alt = '';
+      const span = document.createElement('span');
+      span.textContent = `${p.name || p.handle}${p.muted ? ' (Muted)' : ''}`;
+      chip.appendChild(img);
+      chip.appendChild(span);
+      els.vcParticipantsList.appendChild(chip);
+    });
+  }
+  if (els.btnVcMute) els.btnVcMute.textContent = socialClient.muted ? 'Unmute Mic' : 'Mute Mic';
+  if (els.btnVcDeafen) els.btnVcDeafen.textContent = socialClient.deafened ? 'Undeafen' : 'Deafen';
+}
+
+function renderFriendsTab() {
+  if (!els.friendsListContainer) return;
+  const friends = socialClient ? socialClient.getFriendsSnapshot() : [];
+  els.friendsListContainer.innerHTML = '';
+
+  if (!friends.length) {
+    const empty = document.createElement('div');
+    empty.className = 'hint-text';
+    empty.textContent = 'No friends added yet. Enter a friend\'s @handle above (for example @alex) to see their Rich Presence and start a Voice Call!';
+    els.friendsListContainer.appendChild(empty);
+    renderVcBanner();
+    return;
+  }
+
+  friends.forEach((f) => {
+    const row = document.createElement('div');
+    row.className = 'friend-row';
+
+    const left = document.createElement('div');
+    left.className = 'friend-left';
+
+    const avWrap = document.createElement('div');
+    avWrap.className = 'friend-avatar-wrap';
+    const avImg = document.createElement('img');
+    avImg.className = 'friend-avatar-img';
+    avImg.src = f.avatar || './assets/maxmb/icons/avatars/firmware/000.png';
+    avImg.alt = '';
+    const dot = document.createElement('span');
+    dot.className = `live-status-dot status-${f.status === 'offline' ? 'invisible' : f.status}`;
+    avWrap.appendChild(avImg);
+    avWrap.appendChild(dot);
+
+    const meta = document.createElement('div');
+    meta.className = 'friend-meta';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'friend-name';
+    nameEl.innerHTML = `${f.name}<span class="friend-handle">${f.handle}</span>`;
+    const actEl = document.createElement('div');
+    actEl.className = `friend-activity${f.gameTitle ? ' playing' : ''}`;
+    actEl.textContent = f.status === 'offline' ? 'Offline' : (f.activity || 'Just browsing');
+    meta.appendChild(nameEl);
+    meta.appendChild(actEl);
+
+    left.appendChild(avWrap);
+    left.appendChild(meta);
+
+    const actions = document.createElement('div');
+    actions.className = 'friend-actions';
+
+    const btnCall = document.createElement('button');
+    btnCall.type = 'button';
+    btnCall.className = 'btn-primary btn-xs';
+    btnCall.textContent = f.inVc ? 'Join VC' : 'Call';
+    btnCall.disabled = f.status === 'offline';
+    btnCall.addEventListener('click', () => {
+      socialClient?.callFriend(f.handle);
+      showToast(`Calling ${f.name} (${f.handle})...`);
+    });
+
+    const btnRem = document.createElement('button');
+    btnRem.type = 'button';
+    btnRem.className = 'btn-danger btn-xs';
+    btnRem.textContent = '×';
+    btnRem.title = 'Remove Friend';
+    btnRem.addEventListener('click', async () => {
+      const prof = activeProfile();
+      prof.friends = (prof.friends || []).filter((item) => normalizeHandle(item.handle) !== f.handle);
+      await persist();
+      renderFriendsTab();
+      if (activeSettings().theme === 'xmb') renderXmb();
+    });
+
+    actions.appendChild(btnCall);
+    actions.appendChild(btnRem);
+    row.appendChild(left);
+    row.appendChild(actions);
+    els.friendsListContainer.appendChild(row);
+  });
+
+  renderVcBanner();
+}
+
+function initSocialAndVc() {
+  socialClient = new SocialClient({
+    onStatusChange: (isOnline) => {
+      if (els.socialConnBadge) {
+        els.socialConnBadge.textContent = isOnline ? 'Online' : 'Reconnecting…';
+        els.socialConnBadge.style.color = isOnline ? '#4ade80' : '#fbbf24';
+      }
+    },
+    onFriendsUpdate: () => {
+      if (state.drawerOpen && state.activeTab === 'friends') renderFriendsTab();
+      if (activeSettings().theme === 'xmb') renderXmb();
+    },
+    onVcUpdate: (vcSt) => {
+      api.updateVcState?.(vcSt);
+      renderVcBanner();
+      if (activeSettings().theme === 'xmb') renderXmb();
+    },
+    onIncomingCall: (fromHandle, fromName) => {
+      showToast(`🔊 Voice Call connected with ${fromName} (${fromHandle})`);
+    }
+  });
+
+  socialClient.setProfileAndGame(activeProfile(), currentRunningGame);
+  socialClient.connect();
+
+  api.onRunningGameChange?.((g) => {
+    currentRunningGame = g || null;
+    socialClient?.setProfileAndGame(activeProfile(), currentRunningGame);
+    if (activeSettings().theme === 'xmb') renderXmb();
+  });
+
+  els.btnAddFriend?.addEventListener('click', async () => {
+    const raw = els.addFriendHandleInput?.value.trim();
+    const h = normalizeHandle(raw);
+    if (!h) {
+      showToast('Enter a valid @handle');
+      return;
+    }
+    const prof = activeProfile();
+    if (h === normalizeHandle(prof.handle || prof.name)) {
+      showToast('You cannot add yourself');
+      return;
+    }
+    if (!Array.isArray(prof.friends)) prof.friends = [];
+    if (prof.friends.some((f) => normalizeHandle(f.handle) === h)) {
+      showToast(`${h} is already in your friends list`);
+      return;
+    }
+    prof.friends.push({ handle: h, nickname: '', addedAt: new Date().toISOString() });
+    if (els.addFriendHandleInput) els.addFriendHandleInput.value = '';
+    await persist();
+    renderFriendsTab();
+    if (activeSettings().theme === 'xmb') renderXmb();
+    showToast(`Added ${h} to Friends!`);
+  });
+
+  els.btnVcMute?.addEventListener('click', () => {
+    if (!socialClient) return;
+    socialClient.setMuted(!socialClient.muted);
+    renderVcBanner();
+  });
+
+  els.btnVcDeafen?.addEventListener('click', () => {
+    if (!socialClient) return;
+    socialClient.setDeafened(!socialClient.deafened);
+    renderVcBanner();
+  });
+
+  els.btnVcLeave?.addEventListener('click', () => {
+    socialClient?.leaveCall();
+    renderVcBanner();
+    showToast('Left voice call');
+  });
+}

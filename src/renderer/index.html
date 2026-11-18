@@ -3,11 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; media-src 'self' file:; style-src 'self' 'unsafe-inline'; font-src 'self' file: data:; script-src 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; media-src 'self' file:; connect-src 'self' wss: https: ws:; style-src 'self' 'unsafe-inline'; font-src 'self' file: data:; script-src 'self';" />
   <title>GLauncher Alpha</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="theme-obsidian glass-liquid">
+  <!-- App-Wide Startup Animation (Non-blocking, auto-hides cleanly) -->
+  <div id="appStartupSplash" class="app-startup-splash" aria-hidden="true">
+    <div class="startup-disc-wrap">
+      <div class="startup-disc-ring"></div>
+      <div class="startup-disc-core"></div>
+    </div>
+    <div class="startup-wordmark">GLAUNCHER</div>
+    <div class="startup-sub">ALPHA • PHYSICAL MEDIA STAGE</div>
+  </div>
+
   <div class="app-shell">
     <!-- PS3 XMB MP4 / Image Wallpaper Layer (behind WebGL wave) -->
     <div id="xmbWallpaperWrap" class="xmb-wallpaper hidden" aria-hidden="true">
@@ -104,6 +114,13 @@
               <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
             </svg>
             <span class="rail-tooltip">Media Hub (Music, Video &amp; Photo)</span>
+          </button>
+          <button class="rail-btn" data-rail="friends" title="Friends, Rich Presence &amp; Voice Chat">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span class="rail-tooltip">Friends &amp; Voice Chat</span>
           </button>
           <button class="rail-btn" data-rail="profile" title="Profile Card, Super Roles &amp; VFX">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -328,12 +345,18 @@
             <img class="xmb-music-icon" src="assets/maxmb/icons/theme/icon_music.png" alt="" />
             <div class="xmb-music-meta">
               <div id="xmbMusicTitle" class="xmb-music-title">Now Playing</div>
-              <div id="xmbMusicTime" class="xmb-music-time">0:00 / 0:00</div>
+              <div class="xmb-music-progress-row">
+                <input id="xmbMusicSeek" type="range" min="0" max="100" value="0" class="music-seek-slider" aria-label="Seek Track" />
+                <span id="xmbMusicTime" class="xmb-music-time">0:00 / 0:00</span>
+              </div>
             </div>
             <div class="xmb-music-controls">
+              <button id="btnXmbMusicShuffle" class="btn-secondary btn-xs" title="Shuffle">🔀</button>
               <button id="btnXmbMusicPrev" class="btn-secondary btn-xs">&#9664;&#9664;</button>
               <button id="btnXmbMusicToggle" class="btn-primary btn-xs">Pause</button>
               <button id="btnXmbMusicNext" class="btn-secondary btn-xs">&#9654;&#9654;</button>
+              <button id="btnXmbMusicRepeat" class="btn-secondary btn-xs" title="Repeat">🔁</button>
+              <input id="xmbMusicVol" type="range" min="0" max="100" value="85" class="music-vol-slider" title="Volume" aria-label="Volume" />
               <button id="btnXmbMusicClose" class="btn-danger btn-xs">&times;</button>
             </div>
             <audio id="xmbAudioPlayerEl"></audio>
@@ -386,6 +409,7 @@
             <button class="sel-tab active" data-tab="display" role="tab">Display &amp; 3D</button>
             <button class="sel-tab" data-tab="library" role="tab">Games &amp; .exe</button>
             <button class="sel-tab" data-tab="profiles" role="tab">Profile &amp; Super Roles</button>
+            <button class="sel-tab" data-tab="friends" role="tab">Friends &amp; VC</button>
             <button class="sel-tab" data-tab="trophies" role="tab">Trophies &amp; Alerts</button>
             <button class="sel-tab" data-tab="launcher" role="tab">Media &amp; System</button>
           </div>
@@ -505,6 +529,7 @@
                   </div>
                   <div class="quick-exe-row">
                     <button type="button" id="btnDetectRoblox" class="btn-link">Detect Roblox Player (.exe)</button>
+                    <button type="button" id="btnDetectMinecraft" class="btn-link">Detect Minecraft / TLauncher (.exe)</button>
                     <button type="button" id="btnTestNotepadExe" class="btn-link">Use Notepad (.exe) to test</button>
                     <button type="button" id="btnOpenGameFolder" class="btn-link hidden">Open Folder</button>
                   </div>
@@ -646,16 +671,30 @@
                   <input id="profileHandleInput" type="text" class="text-input" maxlength="28" placeholder="@player1" />
                 </div>
                 <div class="form-field">
-                  <label for="profileBannerPreset">Profile Card Banner</label>
-                  <select id="profileBannerPreset" class="select-input">
-                    <option value="linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)">Prismatic Cyberpunk</option>
-                    <option value="linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #38bdf8 100%)">Obsidian Midnight</option>
-                    <option value="linear-gradient(135deg, #7928ca 0%, #ff0080 100%)">Synthwave Magenta</option>
-                    <option value="linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">Emerald Matrix</option>
-                    <option value="linear-gradient(135deg, #f12711 0%, #f5af19 100%)">Solar Flare</option>
-                    <option value="url('./assets/maxmb/cinfo/cinfo-bg-home-modern.jpg')">PS3 Home Modern</option>
-                    <option value="url('./assets/maxmb/cinfo/cinfo-bg-storegame.jpg')">PS3 Store Cosmic</option>
-                  </select>
+                  <label for="profileBannerPreset">Profile Card Banner (Gradient or Custom Image)</label>
+                  <div class="input-with-btn">
+                    <select id="profileBannerPreset" class="select-input">
+                      <option value="linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)">Prismatic Cyberpunk</option>
+                      <option value="linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #38bdf8 100%)">Obsidian Midnight</option>
+                      <option value="linear-gradient(135deg, #7928ca 0%, #ff0080 100%)">Synthwave Magenta</option>
+                      <option value="linear-gradient(135deg, #11998e 0%, #38ef7d 100%)">Emerald Matrix</option>
+                      <option value="linear-gradient(135deg, #f12711 0%, #f5af19 100%)">Solar Flare</option>
+                      <option value="url('./assets/maxmb/cinfo/cinfo-bg-home-modern.jpg')">PS3 Home Modern</option>
+                      <option value="url('./assets/maxmb/cinfo/cinfo-bg-storegame.jpg')">PS3 Store Cosmic</option>
+                    </select>
+                    <button type="button" id="btnPickBannerImg" class="btn-secondary btn-sm">Upload…</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="split-2">
+                <div class="form-field">
+                  <label for="profilePrimaryColorInput">Profile Card Primary Color</label>
+                  <input id="profilePrimaryColorInput" type="color" value="#1e1b4b" class="color-picker" />
+                </div>
+                <div class="form-field">
+                  <label for="profileAccentColorInput">Profile Card Accent Color</label>
+                  <input id="profileAccentColorInput" type="color" value="#38bdf8" class="color-picker" />
                 </div>
               </div>
 
@@ -673,7 +712,8 @@
                 <label>Custom Roles &amp; Animated Super Roles (Click × to remove)</label>
                 <div id="profileRolesEditorList" class="profile-roles-wrap"></div>
                 <div class="role-creator-row" style="margin-top:6px;">
-                  <input id="newRoleNameInput" type="text" class="text-input" maxlength="22" placeholder="Role name (e.g. ★ Speedrunner)" />
+                  <input id="newRoleIconInput" type="text" class="text-input" maxlength="4" placeholder="⚡" style="max-width:54px; text-align:center;" />
+                  <input id="newRoleNameInput" type="text" class="text-input" maxlength="22" placeholder="Role name (e.g. Speedrunner)" />
                   <select id="newRoleTierSelect" class="select-input" style="max-width:140px;">
                     <option value="standard">Standard Role</option>
                     <option value="super">✦ Super Role (Animated)</option>
@@ -681,6 +721,12 @@
                   </select>
                   <input id="newRoleColorInput" type="color" value="#38bdf8" class="color-picker color-picker-inline" />
                   <button type="button" id="btnAddProfileRole" class="btn-primary btn-sm">+ Add Role</button>
+                </div>
+                <div class="quick-exe-row" style="margin-top:6px;">
+                  <button type="button" class="btn-link quick-role-preset" data-rname="Founder" data-ricon="👑" data-rcolor="#facc15" data-rtier="mythic">+ 👑 Founder</button>
+                  <button type="button" class="btn-link quick-role-preset" data-rname="Developer" data-ricon="⚡" data-rcolor="#38bdf8" data-rtier="super">+ ⚡ Developer</button>
+                  <button type="button" class="btn-link quick-role-preset" data-rname="Streamer" data-ricon="🎙️" data-rcolor="#a855f7" data-rtier="super">+ 🎙️ Streamer</button>
+                  <button type="button" class="btn-link quick-role-preset" data-rname="VIP" data-ricon="💎" data-rcolor="#ec4899" data-rtier="mythic">+ 💎 VIP</button>
                 </div>
               </div>
             </div>
@@ -882,7 +928,36 @@
             </div>
           </section>
 
-          <!-- TAB 4: TROPHIES, ACHIEVEMENTS & NOTIFICATION CENTER -->
+          <!-- TAB 4: FRIENDS, RICH PRESENCE & VOICE CHAT -->
+          <section id="tab-friends" class="tab-panel hidden">
+            <div class="panel-group">
+              <div class="group-label" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Online Friends &amp; Rich Presence</span>
+                <span id="socialConnBadge" class="badge-pill">Connecting…</span>
+              </div>
+              <div class="input-with-btn" style="margin-bottom:10px;">
+                <input id="addFriendHandleInput" type="text" class="text-input" placeholder="Enter friend's @handle (e.g. @alex)" maxlength="30" />
+                <button type="button" id="btnAddFriend" class="btn-primary btn-sm">+ Add Friend</button>
+              </div>
+              <div id="friendsListContainer" class="friends-list"></div>
+            </div>
+
+            <div class="panel-group">
+              <div class="group-label">Voice Chat (Discord-Style Overlay)</div>
+              <p class="hint-text" style="margin-bottom:8px;">Join a voice call with a friend. While playing any game, active speakers appear in a translucent top-left overlay with a green speaking ring.</p>
+              <div id="vcActiveBanner" class="vc-active-banner hidden">
+                <div id="vcParticipantsList" class="vc-participants-list"></div>
+                <div class="vc-controls-row">
+                  <button type="button" id="btnVcMute" class="btn-secondary btn-sm">Mute Mic</button>
+                  <button type="button" id="btnVcDeafen" class="btn-secondary btn-sm">Deafen</button>
+                  <button type="button" id="btnVcLeave" class="btn-danger btn-sm">Leave Call</button>
+                </div>
+              </div>
+              <div id="vcIdleHint" class="hint-text">Not currently in a voice call. Click <strong>Call</strong> next to any online friend above to start!</div>
+            </div>
+          </section>
+
+          <!-- TAB 5: TROPHIES, ACHIEVEMENTS & NOTIFICATION CENTER -->
           <section id="tab-trophies" class="tab-panel hidden">
             <div class="panel-group">
               <div class="group-header-row">
@@ -1038,17 +1113,27 @@
     </div>
   </div>
 
-  <div id="obsidianMusicPill" class="obsidian-music-pill hidden" aria-label="Obsidian Now Playing">
-    <div class="obs-music-eq"><span></span><span></span><span></span></div>
-    <div class="obs-music-meta">
-      <div id="obsMusicTitle" class="obs-music-title">Now Playing</div>
-      <div id="obsMusicSub" class="obs-music-sub">0:00 / 0:00</div>
+  <div id="obsidianMusicPill" class="obsidian-music-pill revamped hidden" aria-label="Obsidian Now Playing">
+    <div class="obs-music-top">
+      <div class="obs-music-art-badge">
+        <div class="obs-music-eq"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="obs-music-meta">
+        <div id="obsMusicTitle" class="obs-music-title">Now Playing</div>
+        <div id="obsMusicSub" class="obs-music-sub">0:00 / 0:00</div>
+      </div>
+      <div class="obs-music-btns">
+        <button id="btnObsMusicShuffle" class="btn-secondary btn-xs" title="Shuffle">🔀</button>
+        <button id="btnObsMusicPrev" class="btn-secondary btn-xs">&#9664;&#9664;</button>
+        <button id="btnObsMusicToggle" class="btn-primary btn-xs">Pause</button>
+        <button id="btnObsMusicNext" class="btn-secondary btn-xs">&#9654;&#9654;</button>
+        <button id="btnObsMusicRepeat" class="btn-secondary btn-xs" title="Repeat">🔁</button>
+        <button id="btnObsMusicClose" class="btn-danger btn-xs">&times;</button>
+      </div>
     </div>
-    <div class="obs-music-btns">
-      <button id="btnObsMusicPrev" class="btn-secondary btn-xs">&#9664;&#9664;</button>
-      <button id="btnObsMusicToggle" class="btn-primary btn-xs">Pause</button>
-      <button id="btnObsMusicNext" class="btn-secondary btn-xs">&#9654;&#9654;</button>
-      <button id="btnObsMusicClose" class="btn-danger btn-xs">&times;</button>
+    <div class="obs-music-bottom">
+      <input id="obsMusicSeek" type="range" min="0" max="100" value="0" class="music-seek-slider" aria-label="Seek Track" />
+      <input id="obsMusicVol" type="range" min="0" max="100" value="85" class="music-vol-slider" title="Volume" aria-label="Volume" />
     </div>
   </div>
 
@@ -1123,6 +1208,7 @@
           </div>
           <div class="quick-exe-row" style="margin-top:4px;">
             <button type="button" id="btnPs3DetectRoblox" class="btn-link">Detect Roblox Player (.exe)</button>
+            <button type="button" id="btnPs3DetectMinecraft" class="btn-link">Detect Minecraft / TLauncher (.exe)</button>
           </div>
         </div>
         <div class="form-field">

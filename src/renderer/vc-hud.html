@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';" />
+  <title>GLauncher Voice Overlay</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+      color: #f8fafc;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .vc-hud-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 6px;
+    }
+    .vc-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 12px 5px 6px;
+      border-radius: 999px;
+      background: rgba(10, 13, 22, 0.72);
+      border: 1.5px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(12px);
+      width: fit-content;
+      max-width: 245px;
+      opacity: 0.46;
+      transition: opacity 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+    .vc-pill.speaking {
+      opacity: 1;
+      border-color: #22c55e;
+      background: rgba(10, 16, 26, 0.9);
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.45);
+      transform: translateX(2px);
+    }
+    .vc-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid transparent;
+      background: #1e293b;
+      flex-shrink: 0;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .vc-pill.speaking .vc-avatar {
+      border-color: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+    .vc-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vc-muted {
+      font-size: 10px;
+      color: #f87171;
+      font-weight: 800;
+      margin-left: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div id="vcHudList" class="vc-hud-list"></div>
+  <script>
+    const listEl = document.getElementById('vcHudList');
+    function renderVc(state) {
+      listEl.innerHTML = '';
+      if (!state?.active || !Array.isArray(state.participants)) return;
+      state.participants.forEach((p) => {
+        const pill = document.createElement('div');
+        pill.className = `vc-pill${p.speaking ? ' speaking' : ''}`;
+        const img = document.createElement('img');
+        img.className = 'vc-avatar';
+        img.src = p.avatar || './assets/maxmb/icons/avatars/firmware/000.png';
+        const span = document.createElement('span');
+        span.className = 'vc-name';
+        span.textContent = p.name || p.handle || 'Player';
+        pill.appendChild(img);
+        pill.appendChild(span);
+        if (p.muted) {
+          const m = document.createElement('span');
+          m.className = 'vc-muted';
+          m.textContent = 'MUTED';
+          pill.appendChild(m);
+        }
+        listEl.appendChild(pill);
+      });
+    }
+    window.launcherAPI?.onVcState?.(renderVc);
+    window.launcherAPI?.getVcState?.().then((st) => { if (st) renderVc(st); });
+  </script>
+</body>
+</html>

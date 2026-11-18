@@ -1,7 +1,7 @@
 {
   "name": "glauncher",
-  "version": "0.1.0-alpha.1",
-  "updateFeedUrl": "",
+  "version": "0.2.0",
+  "updateFeedUrl": "https://raw.githubusercontent.com/lostfaithxenia/GLauncher-Alpha/main/update-manifest.json",
   "description": "GLauncher Alpha — A tactile physical-media Windows game launcher featuring switchable Game CD and Game Case interfaces.",
   "main": "src/main.js",
   "scripts": {

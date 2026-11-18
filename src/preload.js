@@ -30,6 +30,19 @@ contextBridge.exposeInMainWorld('launcherAPI', {
   searchGameCover: (title) => ipcRenderer.invoke('artwork:searchCover', title),
   extractExeIcon: (exePath) => ipcRenderer.invoke('artwork:extractExeIcon', exePath),
   findRobloxExe: () => ipcRenderer.invoke('game:findRobloxExe'),
+  findMinecraftExe: () => ipcRenderer.invoke('game:findMinecraftExe'),
+  updateVcState: (vcState) => ipcRenderer.invoke('vc:updateState', vcState),
+  getVcState: () => ipcRenderer.invoke('vc:getState'),
+  onVcState: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('vc:state', handler);
+    return () => ipcRenderer.removeListener('vc:state', handler);
+  },
+  onRunningGameChange: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('game:runningChanged', handler);
+    return () => ipcRenderer.removeListener('game:runningChanged', handler);
+  },
   fetchOfficialManual: (title) => ipcRenderer.invoke('manual:fetch', title),
   fetchTrailer: (payload) => ipcRenderer.invoke('trailer:fetch', payload),
   importArtworkFile: (filePath) => ipcRenderer.invoke('artwork:importFile', filePath),
