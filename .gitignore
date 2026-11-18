@@ -6,3 +6,5 @@ ps3_audio/
 *.log
 .DS_Store
 Thumbs.db
+
+update/*.exe

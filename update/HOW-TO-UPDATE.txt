@@ -1,0 +1,31 @@
+====================================================================
+              GLauncher v0.2.0 - Safe Update Package
+====================================================================
+
+YOUR CUSTOMIZATION IS 100% SAFE!
+--------------------------------------------------------------------
+Updating to v0.2.0 will NOT remove or reset:
+  * Your profile, display name, @handle, bio, banners, or roles
+  * Your added games, covers, or playtime stats
+  * Your ps3_pic, ps3_video, and ps3_audio custom media folders
+
+WHICH FILE TO RUN:
+--------------------------------------------------------------------
+1. If you installed GLauncher with the Setup installer:
+   -> Close GLauncher, then run "GLauncher-Update-Setup-0.2.0.exe".
+      It updates the app in-place while keeping all your data.
+
+2. If you run GLauncher as a Portable .exe:
+   -> Close GLauncher, and replace your old GLauncher .exe with
+      "GLauncher-Update-Portable-0.2.0.exe" in the same folder.
+
+WHAT'S NEW IN v0.2.0:
+--------------------------------------------------------------------
+  * Discord-style Profiles, @handles, custom banners & role presets
+  * Online Friends & Rich Presence ("Playing <Game>" / "Just browsing")
+  * WebRTC Voice Chat + translucent in-game overlay with green rings
+  * Fixed Obsidian white background & native dropdown flashes
+  * Revamped Music Player on both Obsidian and PS3 XMB
+  * Minecraft Launcher, Minecraft & TLauncher auto-detection
+  * App-wide startup animation & persistent theme across boots
+====================================================================
