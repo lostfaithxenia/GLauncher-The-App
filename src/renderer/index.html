@@ -121,6 +121,12 @@
             </svg>
             <span class="rail-tooltip">Media Hub (Music, Video &amp; Photo)</span>
           </button>
+          <button class="rail-btn rail-store-btn" data-rail="store" title="Free Games Store (Built-In AdBlocker)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            <span class="rail-tooltip">Free Games Store (AdBlocked)</span>
+          </button>
           <button class="rail-btn" data-rail="friends" title="Friends, Rich Presence &amp; Voice Chat">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -897,9 +903,10 @@
                 <div class="passport-card-box">
                   <div class="passport-box-label">Exclusive Holographic Foil Roles (1-Click Equip)</div>
                   <div class="foil-role-preset-grid">
-                    <button type="button" class="foil-role-emblem role-tier-dev-viera quick-role-preset" data-rname="VIERA • DEV" data-ricon="" data-rcolor="#22d3ee" data-rtier="dev-viera" data-rimg="./assets/profile-fx/animated/zap.webp">
+                    <button type="button" class="foil-role-emblem role-tier-dev-viera quick-role-preset" data-lock-key="viera" data-rname="VIERA • DEV" data-ricon="" data-rcolor="#22d3ee" data-rtier="dev-viera" data-rimg="./assets/profile-fx/animated/zap.webp">
                       <img class="foil-role-anim" src="./assets/profile-fx/animated/zap.webp" alt="" />
                       <span>VIERA • DEV</span>
+                      <span class="role-lock-tag" data-lock-badge="viera">🔒</span>
                     </button>
                     <button type="button" class="foil-role-emblem role-tier-special-joshua quick-role-preset" data-lock-key="joshua" data-rname="JOSHUA" data-ricon="" data-rcolor="#facc15" data-rtier="special-joshua" data-rimg="./assets/profile-fx/animated/crown.webp">
                       <img class="foil-role-anim" src="./assets/profile-fx/animated/crown.webp" alt="" />
@@ -935,7 +942,7 @@
                       <option value="standard">Glass Foil</option>
                       <option value="super">✦ Super Foil</option>
                       <option value="mythic">🔥 Mythic Foil</option>
-                      <option value="dev-viera">⚡ Viera DEV</option>
+                      <option value="dev-viera">🔒 Viera DEV</option>
                       <option value="special-joshua">🔒 Joshua Special</option>
                       <option value="special-ruben">🔒 Ruben Special</option>
                     </select>
@@ -1007,7 +1014,10 @@
                     </div>
                   </div>
                   <div class="split-2" style="margin-top:6px;">
-                    <label class="check-row"><input id="settingObsidianSounds" type="checkbox" checked /><span>🔊 Obsidian &amp; Orbit UI Sounds</span></label>
+                    <div class="form-field" style="margin:0;">
+                      <label class="check-row"><input id="settingObsidianSounds" type="checkbox" checked /><span>🔊 Soft UI Sounds</span></label>
+                      <input id="settingObsidianSfxVol" type="range" min="0" max="60" value="22" class="music-vol-slider" style="width:100%; margin-top:4px;" title="UI Sound Volume" />
+                    </div>
                     <div class="form-field" style="margin:0;">
                       <label for="settingLaunchCinematic" style="font-size:11px;">Game Launch Cinematic</label>
                       <select id="settingLaunchCinematic" class="select-input">
@@ -1312,13 +1322,20 @@
   <div id="obsidianMusicPill" class="obsidian-music-pill revamped hidden" aria-label="Obsidian Now Playing">
     <div class="obs-music-top">
       <div class="obs-music-art-badge">
-        <div class="obs-music-eq"><span></span><span></span><span></span><span></span></div>
+        <img id="obsMusicCoverImg" class="obs-music-cover hidden" alt="" />
+        <div id="obsMusicEqBars" class="obs-music-eq"><span></span><span></span><span></span><span></span></div>
       </div>
       <div class="obs-music-meta">
         <div id="obsMusicTitle" class="obs-music-title">Now Playing</div>
         <div id="obsMusicSub" class="obs-music-sub">0:00 / 0:00</div>
       </div>
       <div class="obs-music-btns">
+        <select id="obsMusicEqSelect" class="select-input obs-eq-select" title="Hi-Fi Audio Quality Enhancer">
+          <option value="hifi">✨ Hi-Fi+</option>
+          <option value="bass">🔊 Bass+</option>
+          <option value="vocal">🎤 Vocal</option>
+          <option value="flat">🎛 Flat</option>
+        </select>
         <button id="btnObsMusicShuffle" class="btn-secondary btn-xs" title="Shuffle">🔀</button>
         <button id="btnObsMusicPrev" class="btn-secondary btn-xs">&#9664;&#9664;</button>
         <button id="btnObsMusicToggle" class="btn-primary btn-xs">Pause</button>
@@ -1564,6 +1581,77 @@
       <div id="launchCinTitle" class="launch-cin-title">Launching Game...</div>
       <div id="launchCinSub" class="launch-cin-sub">PREPARING PHYSICAL MEDIA STAGE</div>
     </div>
+  </div>
+
+  <!-- Built-In Legal Free Games Store (Ad-Blocker Protected Webview) -->
+  <div id="storeBrowserModal" class="obsidian-media-hub hidden" role="dialog" aria-modal="true" aria-label="Free Games Store">
+    <div class="store-browser-card">
+      <div class="store-browser-bar">
+        <div class="store-brand">
+          <span class="store-adblock-pill">🛡️ AdBlock ON</span>
+          <h3>Free Games Store</h3>
+        </div>
+        <div class="store-hub-tabs">
+          <button type="button" class="store-hub-btn active" data-store-url="https://store.steampowered.com/genre/Free%20to%20Play/">Steam Free</button>
+          <button type="button" class="store-hub-btn" data-store-url="https://store.epicgames.com/en-US/free-games">Epic Free</button>
+          <button type="button" class="store-hub-btn" data-store-url="https://itch.io/games/free">Itch.io Free</button>
+          <button type="button" class="store-hub-btn" data-store-url="https://www.gog.com/en/games?priceRange=0,0&discounted=false">GOG Free</button>
+        </div>
+        <div class="store-nav-btns">
+          <button type="button" id="btnStoreBack" class="btn-secondary btn-xs" title="Back">◀</button>
+          <button type="button" id="btnStoreReload" class="btn-secondary btn-xs" title="Reload">↻</button>
+          <button type="button" id="btnStoreExternal" class="btn-secondary btn-xs" title="Open in Browser">↗</button>
+          <button type="button" id="btnCloseStore" class="drawer-close" title="Close Store">&times;</button>
+        </div>
+      </div>
+      <div id="storeWebviewHost" class="store-webview-host"></div>
+    </div>
+  </div>
+
+  <!-- Floating Issue / Bug Reporter & Live Dev Inbox Chat Box (Obsidian & Orbit) -->
+  <div id="feedbackFloatWrap" class="feedback-float-wrap">
+    <div id="feedbackChatBox" class="feedback-chat-box hidden" role="dialog" aria-label="Issue Reporter Chat">
+      <div class="feedback-chat-head">
+        <div>
+          <div class="feedback-head-title">💬 Issue &amp; Feedback Chat</div>
+          <div class="feedback-head-sub">Sends live to Viera inside GLauncher</div>
+        </div>
+        <div class="feedback-head-actions">
+          <button type="button" id="btnFeedbackTabUser" class="fb-tab-btn active">Report</button>
+          <button type="button" id="btnFeedbackTabDev" class="fb-tab-btn hidden">⚡ Dev Inbox <span id="devInboxCount" class="dev-inbox-pill">0</span></button>
+          <button type="button" id="btnCloseFeedback" class="icon-btn" title="Close">✕</button>
+        </div>
+      </div>
+
+      <div id="feedbackUserPane" class="feedback-pane">
+        <div id="feedbackUserMessages" class="feedback-msg-list">
+          <div class="fb-msg fb-msg-system">Spot a bug or have an idea? Type it below — it goes straight to Viera's launcher (and Discord if connected)!</div>
+        </div>
+        <form id="feedbackSendForm" class="feedback-input-row">
+          <input id="feedbackMsgInput" type="text" class="text-input" maxlength="400" placeholder="Describe the issue or idea..." required />
+          <button type="submit" class="btn-primary btn-xs">Send</button>
+        </form>
+        <div class="feedback-ext-row">
+          <button type="button" id="btnFeedbackGithub" class="btn-link" style="font-size:11px;">↗ Also open on GitHub Issues</button>
+        </div>
+      </div>
+
+      <div id="feedbackDevPane" class="feedback-pane hidden">
+        <div class="feedback-webhook-bar">
+          <input id="devWebhookInput" type="url" class="text-input" style="font-size:11px;" placeholder="Optional Discord Webhook URL (external alerts)..." />
+          <button type="button" id="btnSaveDevWebhook" class="btn-secondary btn-xs">Save</button>
+        </div>
+        <div id="feedbackDevInboxList" class="feedback-msg-list">
+          <div class="fb-msg fb-msg-system">No user reports yet. Reports arrive here live even when you were offline!</div>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" id="btnToggleFeedbackChat" class="feedback-fab-btn" title="Report an Issue or Suggestion">
+      <span>💬</span>
+      <span class="feedback-fab-label">Report Issue</span>
+      <span id="feedbackFabBadge" class="feedback-fab-badge hidden">0</span>
+    </button>
   </div>
 
   <!-- Toast Notification -->

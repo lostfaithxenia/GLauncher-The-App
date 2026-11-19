@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld('launcherAPI', {
   pickVideoFile: () => ipcRenderer.invoke('dialog:pickVideo'),
   pickBubbleMedia: () => ipcRenderer.invoke('dialog:pickBubbleMedia'),
   cacheRemoteAsset: (url, kind = 'image') => ipcRenderer.invoke('assets:cacheRemoteAsset', { url, kind }),
+  sendFeedbackWebhook: (payload) => ipcRenderer.invoke('feedback:sendWebhook', payload),
+  openExternalUrl: (url) => ipcRenderer.invoke('system:openExternal', url),
   applyLocalUpdateFile: (filePath) => ipcRenderer.invoke('updater:applyLocalFile', filePath),
   pickWallpaperFile: () => ipcRenderer.invoke('dialog:pickWallpaper'),
   pickAudioFile: () => ipcRenderer.invoke('dialog:pickAudio'),

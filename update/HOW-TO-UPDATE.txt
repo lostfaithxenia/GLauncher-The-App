@@ -1,37 +1,35 @@
 ====================================================================
-     GLauncher v0.4.0 - Mega Cartoon Polish & Asset Vault Update
+      GLauncher v0.5.0 - Bold Revamp, Hi-Fi Audio & Dev Inbox
 ====================================================================
 
 ALL YOUR CUSTOMIZATION IS 100% SAFE!
-Profiles, unlocked VIP roles, games, banners, roles, and ps3 media
+Profiles, unlocked VIP/DEV roles, games, banners & ps3 media folders
 are never deleted when updating.
 
-3 EASY WAYS TO UPDATE ANY PREVIOUSLY INSTALLED GLAUNCHER:
+3 EASY WAYS TO UPDATE:
 --------------------------------------------------------------------
-OPTION 1 (1-Click Inside GLauncher!):
-  - Open GLauncher -> when the v0.4.0 update banner appears, click
-    Install Update! (From v0.4.0 onward, live updates patch app.asar
-    automatically in ~3 seconds!)
+OPTION 1 (1-Click Inside GLauncher):
+  - Open GLauncher -> when v0.5.0 is detected, click Update & Relaunch!
 
 OPTION 2 (2-Second Drag & Drop):
   - Drag "app.asar" directly onto your open GLauncher window,
-    OR double-click "Drop-In-Update-v0.4.0.bat" to auto-apply it!
+    OR double-click "Drop-In-Update-v0.5.0.bat"!
 
 OPTION 3 (Full Installer):
-  - Close GLauncher and run "GLauncher-Setup-0.4.0.exe".
+  - Close GLauncher and run "GLauncher-Setup-0.5.0.exe".
 
-WHAT'S NEW IN v0.4.0:
+WHAT'S NEW IN v0.5.0:
 --------------------------------------------------------------------
-  * In-App Asset Vault: ALL 697+ Animated Avatar Decorations across
-    68 categories + Paste ANY GIF/WebP/PNG/MP4 URL (cached offline!)
-  * Buttery Cartoonish Discord-Style Spring UI Revamp + 14 CC0
-    Obsidian & Orbit UI Sound Effects
-  * Role-Driven Animated Username Colors & FX + Custom Role FX Picker
-  * Code-Locked VIP Roles (Joshua & Ruben) saved permanently across
-    all future updates once unlocked
-  * Orbit 3D Bubbles v2: Audio-Reactive Beat Pulse, Clickable Cinema
-    Lightbox & 4 Bubble Styles (Crystal, Neon, Prism, Soap)
-  * Live Friend Holographic Passport Peek + Live Role Colors in VC
-  * Real Playtime Tracking + Customizable Game Launch Cinematics
-  * Zero Broken Images + Full Xbox/PS Controller Navigation
+  * Fixed PS3 XMB scrolling skipping sections (1 notch = 1 section!)
+  * 83 Animated Discord Avatar Decorations bundled directly inside
+    the launcher (instant offline!) + 697 total in Asset Vault
+  * Bold, Colorful, Chunky Cartoon Revamp for Obsidian & Orbit
+    (PS3 XMB stays 100% untouched!)
+  * Music, Videos & Photos fixed & shared across Obsidian, Orbit & PS3
+    with Real Embedded Song Cover Art + Hi-Fi Studio Audio Enhancer
+  * Soft, pleasant UI sound effects + Volume slider
+  * Built-in Ad-Blocked Free Games Store (Steam, Epic, Itch.io, GOG)
+  * Floating Issue & Feedback Chat Box -> Live Dev Inbox for Viera
+    + optional Discord Webhook & 1-click GitHub Issues!
+  * Locked Dev Role (Viera • DEV) behind secret code
 ====================================================================

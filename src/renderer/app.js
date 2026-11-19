@@ -855,6 +855,7 @@ function applyProfileThemeAndGraphics() {
   xmbAudio.enabled = theme === 'xmb' && settings.xmbSounds !== false;
   xmbAudio.setSoundSet(settings.xmbSoundSet || 'ps3');
   obsidianSfx.enabled = settings.obsidianSounds !== false;
+  obsidianSfx.setVolume(settings.obsidianSfxVolume ?? 0.22);
   const hasWallpaper = syncXmbWallpaper();
 
   const is3dNeeded =
@@ -2889,22 +2890,32 @@ function syncXmbSelectionToStage() {
   }
 }
 
+let lastXmbCatStepAt = 0;
 function stepXmbCategory(dx) {
+  const now = performance.now();
+  if (now - lastXmbCatStepAt < 165) return; // Prevent double-step/scroll-skip across XMB columns
+  lastXmbCatStepAt = now;
   const cats = getActiveXmbCategories();
   if (!cats.length) return;
-  state.xmbCatIdx = (state.xmbCatIdx + dx + cats.length) % cats.length;
+  const step = dx > 0 ? 1 : -1;
+  state.xmbCatIdx = (state.xmbCatIdx + step + cats.length) % cats.length;
   playXmbSfx('cursor');
   renderXmb();
   syncXmbSelectionToStage();
 }
 
+let lastXmbItemStepAt = 0;
 function stepXmbItem(dy) {
+  const now = performance.now();
+  if (now - lastXmbItemStepAt < 110) return;
+  lastXmbItemStepAt = now;
   const cats = getActiveXmbCategories();
   const cat = cats[Math.max(0, Math.min(cats.length - 1, state.xmbCatIdx))];
   const items = getXmbItemsForCategory(cat.id);
   if (!items.length) return;
   const cur = state.xmbItemIdxs[state.xmbCatIdx] || 0;
-  state.xmbItemIdxs[state.xmbCatIdx] = (cur + dy + items.length) % items.length;
+  const step = dy > 0 ? 1 : -1;
+  state.xmbItemIdxs[state.xmbCatIdx] = (cur + step + items.length) % items.length;
   playXmbSfx('cursor');
   renderXmb();
   syncXmbSelectionToStage();
@@ -3478,6 +3489,16 @@ function syncMusicBarsUi() {
     if (els.obsMusicSub) {
       els.obsMusicSub.textContent = [track.artist, track.album].filter(Boolean).join(' • ') || track.source || 'Now Playing';
     }
+    const coverImg = document.getElementById('obsMusicCoverImg');
+    if (coverImg) {
+      if (track.coverUrl) {
+        coverImg.src = track.coverUrl;
+        coverImg.classList.remove('hidden');
+      } else {
+        coverImg.classList.add('hidden');
+        coverImg.removeAttribute('src');
+      }
+    }
   }
   const label = els.xmbAudioPlayerEl?.paused ? 'Play' : 'Pause';
   if (els.btnXmbMusicToggle) els.btnXmbMusicToggle.textContent = label;
@@ -3492,13 +3513,18 @@ function playXmbMusicTrack(list, idx) {
   const track = musicPlaylist[musicTrackIdx];
   if (els.xmbAudioPlayerEl) {
     els.xmbAudioPlayerEl.src = track.url;
-    els.xmbAudioPlayerEl.play().catch(() => {});
+    if (typeof ensureHiFiAudioGraph === 'function') ensureHiFiAudioGraph();
+    els.xmbAudioPlayerEl.play().catch((err) => {
+      console.warn('Audio play error:', err);
+      showToast('Click Play on the Music bar to start audio');
+    });
   }
   syncMusicBarsUi();
 }
 
 function toggleMusicPlayPause() {
   if (!els.xmbAudioPlayerEl) return;
+  if (typeof ensureHiFiAudioGraph === 'function') ensureHiFiAudioGraph();
   if (els.xmbAudioPlayerEl.paused) {
     els.xmbAudioPlayerEl.play().catch(() => {});
   } else {
@@ -3518,10 +3544,11 @@ function renderObsidianMediaHub() {
   if (!els.obsidianMediaGrid) return;
   const tab = state.obsidianMediaTab || 'music';
   els.obsMediaTabs?.forEach((t) => {
-    t.classList.toggle('active', t.dataset.obsMediaTab === tab);
+    const key = t.dataset.mtab || t.dataset.obsMediaTab;
+    t.classList.toggle('active', key === tab);
   });
 
-  const media = state.deviceMedia || { photos: {}, video: {}, audio: {} };
+  const media = state.deviceMedia || { pictures: {}, videos: {}, audio: {} };
   const grid = els.obsidianMediaGrid;
   grid.innerHTML = '';
 
@@ -3593,6 +3620,7 @@ function renderObsidianMediaHub() {
         grid.appendChild(
           makeCard({
             icon: '🎵',
+            thumbUrl: f.coverUrl || '',
             title: f.title,
             sub: `${f.artist ? `${f.artist} • ` : ''}${state.obsidianOpenAlbum}`,
             onClick: () => playXmbMusicTrack(albTracks, idx)
@@ -3617,12 +3645,22 @@ function renderObsidianMediaHub() {
         }
       })
     );
+    grid.appendChild(
+      makeCard({
+        icon: '📁',
+        title: 'Open ps3_audio Folder',
+        sub: 'Shared Music folder for Obsidian, Orbit & PS3',
+        onClick: () => api.openMediaFolder('audio')
+      })
+    );
 
     for (const [albName, albTracks] of albumMap.entries()) {
       const firstArtist = albTracks.find((t) => t.artist)?.artist || '';
+      const firstCover = albTracks.find((t) => t.coverUrl)?.coverUrl || '';
       grid.appendChild(
         makeCard({
           icon: '📁',
+          thumbUrl: firstCover,
           title: albName,
           sub: `Album • ${albTracks.length} ${albTracks.length === 1 ? 'song' : 'songs'}${firstArtist ? ` • ${firstArtist}` : ''}`,
           onClick: () => {
@@ -3637,6 +3675,7 @@ function renderObsidianMediaHub() {
       grid.appendChild(
         makeCard({
           icon: '🎵',
+          thumbUrl: f.coverUrl || '',
           title: f.title,
           sub: `${f.artist ? `${f.artist} • ` : ''}${f.source}`,
           onClick: () => playXmbMusicTrack(singles, idx)
@@ -3645,14 +3684,14 @@ function renderObsidianMediaHub() {
     });
   } else if (tab === 'video') {
     const videos = [
-      ...(media.video?.ps3 || []).map((f) => ({ ...f, source: 'ps3_video' })),
-      ...(media.video?.device || []).map((f) => ({ ...f, source: 'Device Videos' }))
+      ...(media.videos?.ps3 || []).map((f) => ({ ...f, source: 'ps3_video' })),
+      ...(media.videos?.device || []).map((f) => ({ ...f, source: 'Device Videos' }))
     ];
     grid.appendChild(
       makeCard({
         icon: '📁',
         title: 'Open ps3_video Folder',
-        sub: 'Drop MP4 / WebM / MKV videos here',
+        sub: 'Shared Videos folder for Obsidian, Orbit & PS3',
         onClick: () => api.openMediaFolder('video')
       })
     );
@@ -3668,15 +3707,15 @@ function renderObsidianMediaHub() {
     });
   } else {
     const photos = [
-      ...(media.photos?.ps3 || []).map((f) => ({ ...f, source: 'ps3_pic' })),
-      ...(media.photos?.device || []).map((f) => ({ ...f, source: 'Device Pictures' }))
+      ...(media.pictures?.ps3 || []).map((f) => ({ ...f, source: 'ps3_pic' })),
+      ...(media.pictures?.device || []).map((f) => ({ ...f, source: 'Device Pictures' }))
     ];
     grid.appendChild(
       makeCard({
         icon: '📁',
         title: 'Open ps3_pic Folder',
-        sub: 'Saved avatars, covers & wallpapers',
-        onClick: () => api.openMediaFolder('photos')
+        sub: 'Shared Photos folder for Obsidian, Orbit & PS3',
+        onClick: () => api.openMediaFolder('pic')
       })
     );
     photos.forEach((f, idx) => {
@@ -3780,7 +3819,7 @@ function bindEvents() {
 
   els.obsMediaTabs?.forEach((tabBtn) => {
     tabBtn.addEventListener('click', () => {
-      state.obsidianMediaTab = tabBtn.dataset.obsMediaTab || 'music';
+      state.obsidianMediaTab = tabBtn.dataset.mtab || tabBtn.dataset.obsMediaTab || 'music';
       state.obsidianOpenAlbum = null;
       renderObsidianMediaHub();
     });
@@ -3921,6 +3960,8 @@ function bindEvents() {
             renderObsidianMediaHub();
           }
         }
+      } else if (r === 'store') {
+        if (typeof openFreeGamesStore === 'function') openFreeGamesStore();
       } else if (r === 'trophies') {
         if (state.drawerOpen && state.activeTab === 'trophies') closeOptionsDrawer();
         else openOptionsDrawer('trophies');
@@ -6515,8 +6556,11 @@ function initDiscordProfileStudio() {
 // =========================================================
 const ORBIT_CATEGORIES = [
   { id: 'games', label: '🎮 Games' },
-  { id: 'friends', label: '👥 Friends & VC' },
   { id: 'music', label: '🎵 Music' },
+  { id: 'videos', label: '🎬 Videos' },
+  { id: 'photos', label: '🖼 Photos' },
+  { id: 'store', label: '🛍️ Store' },
+  { id: 'friends', label: '👥 Friends & VC' },
   { id: 'trophies', label: '🏆 Trophies' },
   { id: 'profile', label: '✨ Profile' },
   { id: 'settings', label: '⚙️ Settings' }
@@ -6605,27 +6649,141 @@ function getOrbitItems(catId) {
   }
 
   if (catId === 'music') {
-    const tracks = [...(deviceMedia.audio?.ps3 || []), ...(deviceMedia.audio?.device || [])];
-    if (!tracks.length) {
-      return [
-        {
-          id: 'orbit-no-music',
-          title: 'Add Music Tracks (ps3_audio / Music Folder)',
-          sub: 'Open Media & System settings to add MP3/WAV/OGG tracks',
-          emoji: '🎵',
-          tag: 'OPEN',
-          action: () => openOptionsDrawer('launcher')
+    const tracks = [
+      ...(state.deviceMedia?.audio?.ps3 || []).map((f) => ({ ...f, source: 'ps3_audio' })),
+      ...(state.deviceMedia?.audio?.device || []).map((f) => ({ ...f, source: 'Device Music' }))
+    ];
+    const rows = [
+      {
+        id: 'orbit-import-audio',
+        title: '+ Import Song to ps3_audio',
+        sub: 'Add MP3 / WAV / OGG / FLAC (shared with Obsidian & PS3)',
+        emoji: '➕',
+        tag: 'ADD',
+        action: async () => {
+          const picked = await api.pickAudioFile();
+          if (picked) {
+            await refreshDeviceMedia();
+            renderOrbit();
+            showToast('Song added to ps3_audio!');
+          }
         }
-      ];
-    }
-    return tracks.slice(0, 40).map((t, idx) => ({
-      id: `orb-track-${idx}`,
-      title: t.title || 'Track',
-      sub: [t.artist, t.album].filter(Boolean).join(' • ') || 'Audio Track',
-      emoji: '🎵',
-      tag: 'PLAY',
-      action: () => playXmbMusicTrack(tracks, idx)
-    }));
+      },
+      {
+        id: 'orbit-open-audio-folder',
+        title: '📁 Open ps3_audio Folder',
+        sub: 'Drop songs or album folders directly here',
+        emoji: '📁',
+        tag: 'FOLDER',
+        action: () => api.openMediaFolder('audio')
+      }
+    ];
+    tracks.slice(0, 60).forEach((t, idx) => {
+      rows.push({
+        id: `orb-track-${idx}`,
+        title: t.title || 'Track',
+        sub: [t.artist, t.album].filter(Boolean).join(' • ') || t.source || 'Audio Track',
+        thumb: t.coverUrl || '',
+        emoji: '🎵',
+        tag: 'PLAY',
+        action: () => playXmbMusicTrack(tracks, idx)
+      });
+    });
+    return rows;
+  }
+
+  if (catId === 'videos') {
+    const videos = [
+      ...(state.deviceMedia?.videos?.ps3 || []).map((f) => ({ ...f, source: 'ps3_video' })),
+      ...(state.deviceMedia?.videos?.device || []).map((f) => ({ ...f, source: 'Device Videos' }))
+    ];
+    const rows = [
+      {
+        id: 'orbit-open-video-folder',
+        title: '📁 Open ps3_video Folder',
+        sub: 'Shared video folder for Orbit, Obsidian & PS3',
+        emoji: '📁',
+        tag: 'FOLDER',
+        action: () => api.openMediaFolder('video')
+      }
+    ];
+    videos.slice(0, 50).forEach((v, idx) => {
+      rows.push({
+        id: `orb-vid-${idx}`,
+        title: v.title || 'Video',
+        sub: `${v.source} • Click to Watch`,
+        emoji: '🎬',
+        tag: 'WATCH',
+        action: () => openXmbVideoPlayer(v)
+      });
+    });
+    return rows;
+  }
+
+  if (catId === 'photos') {
+    const photos = [
+      ...(state.deviceMedia?.pictures?.ps3 || []).map((f) => ({ ...f, source: 'ps3_pic' })),
+      ...(state.deviceMedia?.pictures?.device || []).map((f) => ({ ...f, source: 'Device Pictures' }))
+    ];
+    const rows = [
+      {
+        id: 'orbit-open-pic-folder',
+        title: '📁 Open ps3_pic Folder',
+        sub: 'Shared photo folder for Orbit, Obsidian & PS3',
+        emoji: '📁',
+        tag: 'FOLDER',
+        action: () => api.openMediaFolder('pic')
+      }
+    ];
+    photos.slice(0, 60).forEach((p, idx) => {
+      rows.push({
+        id: `orb-pic-${idx}`,
+        title: p.title || 'Photo',
+        sub: p.source,
+        thumb: p.url,
+        emoji: '🖼',
+        tag: 'VIEW',
+        action: () => openXmbPhotoViewer(photos, idx)
+      });
+    });
+    return rows;
+  }
+
+  if (catId === 'store') {
+    return [
+      {
+        id: 'orbit-store-steam',
+        title: 'Steam Free-to-Play Store',
+        sub: 'Ad-Blocker Protected • Browse hundreds of official free PC games',
+        emoji: '🎮',
+        tag: 'OPEN',
+        action: () => openFreeGamesStore('https://store.steampowered.com/genre/Free%20to%20Play/')
+      },
+      {
+        id: 'orbit-store-epic',
+        title: 'Epic Games Weekly Free Store',
+        sub: 'Ad-Blocker Protected • Claim free games every week',
+        emoji: '🎁',
+        tag: 'OPEN',
+        action: () => openFreeGamesStore('https://store.epicgames.com/en-US/free-games')
+      },
+      {
+        id: 'orbit-store-itch',
+        title: 'Itch.io Top Free Indie Games',
+        sub: 'Ad-Blocker Protected • Thousands of direct free indie downloads',
+        emoji: '✨',
+        tag: 'OPEN',
+        action: () => openFreeGamesStore('https://itch.io/games/free')
+      },
+      {
+        id: 'orbit-store-gog',
+        title: 'GOG DRM-Free Games Store',
+        sub: 'Ad-Blocker Protected • Direct DRM-free PC game installers',
+        emoji: '💿',
+        tag: 'OPEN',
+        action: () => openFreeGamesStore('https://www.gog.com/en/games?priceRange=0,0&discounted=false')
+      }
+    ];
   }
 
   if (catId === 'trophies') {
@@ -7057,6 +7215,15 @@ setInterval(() => {
 // ROLE-DRIVEN USERNAME EFFECTS & CODE-LOCKED EXCLUSIVE ROLES
 // =========================================================
 const LOCKED_ROLES = {
+  viera: {
+    key: 'viera',
+    tier: 'dev-viera',
+    label: '⚡ VIERA • DEV',
+    code: '2807',
+    color: '#22d3ee',
+    img: './assets/profile-fx/animated/zap.webp',
+    namePattern: /\bviera\b/i
+  },
   joshua: {
     key: 'joshua',
     tier: 'special-joshua',
@@ -7106,6 +7273,7 @@ async function grantPermanentRoleUnlock(key) {
   }
   await persist();
   syncLockedRoleButtons();
+  if (typeof syncDevInboxAccess === 'function') syncDevInboxAccess();
 }
 
 function syncLockedRoleButtons() {
@@ -7360,28 +7528,91 @@ function playGameLaunchCinematic(game) {
   }, 1500);
 }
 
-let orbitAudioCtx = null;
+let hifiAudioCtx = null;
+let hifiBassFilter = null;
+let hifiMidFilter = null;
+let hifiTrebleFilter = null;
+let hifiCompressor = null;
 let orbitAnalyser = null;
 let orbitBeatData = null;
+
+function applyHiFiEqPreset(presetName) {
+  const p = String(presetName || activeSettings().audioEqPreset || 'hifi');
+  if (!hifiBassFilter || !hifiMidFilter || !hifiTrebleFilter) return;
+  if (p === 'bass') {
+    hifiBassFilter.gain.value = 6.5;
+    hifiMidFilter.gain.value = 1.0;
+    hifiTrebleFilter.gain.value = 2.5;
+  } else if (p === 'vocal') {
+    hifiBassFilter.gain.value = 1.0;
+    hifiMidFilter.gain.value = 4.5;
+    hifiTrebleFilter.gain.value = 3.5;
+  } else if (p === 'flat') {
+    hifiBassFilter.gain.value = 0;
+    hifiMidFilter.gain.value = 0;
+    hifiTrebleFilter.gain.value = 0;
+  } else {
+    // Studio Hi-Fi Enhanced: warm punchy bass, crisp clarity & silky air
+    hifiBassFilter.gain.value = 3.6;
+    hifiMidFilter.gain.value = 1.8;
+    hifiTrebleFilter.gain.value = 3.2;
+  }
+}
+
+function ensureHiFiAudioGraph() {
+  const audioEl = els.xmbAudioPlayerEl;
+  if (!audioEl) return;
+  if (hifiAudioCtx) {
+    if (hifiAudioCtx.state === 'suspended') hifiAudioCtx.resume().catch(() => {});
+    applyHiFiEqPreset(activeSettings().audioEqPreset || 'hifi');
+    return;
+  }
+  try {
+    hifiAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = hifiAudioCtx.createMediaElementSource(audioEl);
+
+    hifiBassFilter = hifiAudioCtx.createBiquadFilter();
+    hifiBassFilter.type = 'lowshelf';
+    hifiBassFilter.frequency.value = 95;
+
+    hifiMidFilter = hifiAudioCtx.createBiquadFilter();
+    hifiMidFilter.type = 'peaking';
+    hifiMidFilter.frequency.value = 2800;
+    hifiMidFilter.Q.value = 0.9;
+
+    hifiTrebleFilter = hifiAudioCtx.createBiquadFilter();
+    hifiTrebleFilter.type = 'highshelf';
+    hifiTrebleFilter.frequency.value = 9800;
+
+    hifiCompressor = hifiAudioCtx.createDynamicsCompressor();
+    hifiCompressor.threshold.value = -16;
+    hifiCompressor.knee.value = 18;
+    hifiCompressor.ratio.value = 3.2;
+    hifiCompressor.attack.value = 0.008;
+    hifiCompressor.release.value = 0.16;
+
+    orbitAnalyser = hifiAudioCtx.createAnalyser();
+    orbitAnalyser.fftSize = 128;
+    orbitBeatData = new Uint8Array(orbitAnalyser.frequencyBinCount);
+
+    src.connect(hifiBassFilter);
+    hifiBassFilter.connect(hifiMidFilter);
+    hifiMidFilter.connect(hifiTrebleFilter);
+    hifiTrebleFilter.connect(hifiCompressor);
+    hifiCompressor.connect(orbitAnalyser);
+    orbitAnalyser.connect(hifiAudioCtx.destination);
+
+    applyHiFiEqPreset(activeSettings().audioEqPreset || 'hifi');
+    if (hifiAudioCtx.state === 'suspended') hifiAudioCtx.resume().catch(() => {});
+  } catch (e) {
+    console.warn('Hi-Fi audio graph fallback:', e);
+  }
+}
+
 function startOrbitBeatEngine() {
   const audioEl = els.xmbAudioPlayerEl;
   if (!audioEl) return;
-  const ensureGraph = () => {
-    if (orbitAnalyser) {
-      if (orbitAudioCtx?.state === 'suspended') orbitAudioCtx.resume().catch(() => {});
-      return;
-    }
-    try {
-      orbitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = orbitAudioCtx.createMediaElementSource(audioEl);
-      orbitAnalyser = orbitAudioCtx.createAnalyser();
-      orbitAnalyser.fftSize = 128;
-      orbitBeatData = new Uint8Array(orbitAnalyser.frequencyBinCount);
-      src.connect(orbitAnalyser);
-      orbitAnalyser.connect(orbitAudioCtx.destination);
-    } catch {}
-  };
-  audioEl.addEventListener('play', ensureGraph);
+  audioEl.addEventListener('play', ensureHiFiAudioGraph);
 
   const tick = () => {
     requestAnimationFrame(tick);
@@ -7408,39 +7639,54 @@ async function initAssetVault() {
   const countBadge = document.getElementById('vaultCountBadge');
   if (!catBar || !grid) return;
 
-  let catalog = { categories: [], total: 0 };
+  let catalog = { categories: [], total: 0, localCount: 0 };
   try {
     const r = await fetch('./assets/profile-fx/decorations-catalog.json');
     if (r.ok) catalog = await r.json();
   } catch {}
-  if (countBadge) countBadge.textContent = String(catalog.total || 697);
+  if (countBadge) countBadge.textContent = `${catalog.localCount || 83} Built-In • ${catalog.total || 697} Total`;
 
-  let selectedCat = 'ALL';
   const allItems = catalog.categories.flatMap((c) => c.items.map((it) => ({ ...it, cat: c.name })));
+  const localItems = allItems.filter((it) => it.local && it.localUrl);
+  let selectedCat = localItems.length ? 'LOCAL' : 'ALL';
 
   const renderGrid = () => {
     const q = String(searchInput?.value || '').trim().toLowerCase();
     const list = allItems.filter((it) => {
-      if (selectedCat !== 'ALL' && it.cat !== selectedCat) return false;
+      if (selectedCat === 'LOCAL' && !(it.local && it.localUrl)) return false;
+      if (selectedCat !== 'ALL' && selectedCat !== 'LOCAL' && it.cat !== selectedCat) return false;
       if (q && !it.name.toLowerCase().includes(q) && !it.cat.toLowerCase().includes(q)) return false;
       return true;
     });
     const slice = list.slice(0, 120);
     grid.innerHTML = '';
+    const curDeco = activeProfile().avatarDecoration || '';
     const curRemote = activeProfile().avatarDecorationRemote || '';
     slice.forEach((it) => {
+      const displaySrc = it.local && it.localUrl ? it.localUrl : it.url;
+      const isSelected = curDeco === `url:${displaySrc}` || (curRemote && curRemote === it.url);
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `vault-deco-tile${curRemote === it.url ? ' selected' : ''}`;
-      btn.title = `${it.name} (${it.cat}) — Click to cache offline & equip!`;
+      btn.className = `vault-deco-tile${isSelected ? ' selected' : ''}`;
+      btn.title = `${it.name} (${it.cat})${it.local ? ' — Built into Launcher (Instant Offline!)' : ' — Click to save offline & equip!'}`;
       btn.innerHTML = `
         <div class="vault-deco-preview">
-          <img class="vault-deco-img" src="${it.url}" loading="lazy" alt="" />
+          <img class="vault-deco-img" src="${displaySrc}" loading="lazy" alt="" />
         </div>
-        <div class="vault-deco-name">${it.name}</div>
+        <div class="vault-deco-name">${it.local ? '★ ' : ''}${it.name}</div>
       `;
       btn.addEventListener('click', async () => {
-        showToast(`Caching "${it.name}" offline...`);
+        if (it.local && it.localUrl) {
+          activeProfile().avatarDecoration = `url:${it.localUrl}`;
+          activeProfile().avatarDecorationRemote = it.url;
+          await persist();
+          renderProfileCardAndHud();
+          renderGrid();
+          obsidianSfx.play('success');
+          showToast(`✨ Equipped Built-In Decoration "${it.name}"!`);
+          return;
+        }
+        showToast(`Saving "${it.name}" inside launcher...`);
         const cached = await api.cacheRemoteAsset?.(it.url, 'image');
         const finalUrl = cached?.ok && cached.url ? cached.url : it.url;
         activeProfile().avatarDecoration = `url:${finalUrl}`;
@@ -7464,9 +7710,22 @@ async function initAssetVault() {
   };
 
   catBar.innerHTML = '';
+  if (localItems.length) {
+    const locBtn = document.createElement('button');
+    locBtn.type = 'button';
+    locBtn.className = 'vault-cat-pill active';
+    locBtn.textContent = `★ Saved In Launcher (${localItems.length})`;
+    locBtn.addEventListener('click', () => {
+      selectedCat = 'LOCAL';
+      catBar.querySelectorAll('.vault-cat-pill').forEach((b) => b.classList.toggle('active', b === locBtn));
+      renderGrid();
+    });
+    catBar.appendChild(locBtn);
+  }
+
   const allBtn = document.createElement('button');
   allBtn.type = 'button';
-  allBtn.className = 'vault-cat-pill active';
+  allBtn.className = `vault-cat-pill${localItems.length ? '' : ' active'}`;
   allBtn.textContent = `All (${allItems.length})`;
   allBtn.addEventListener('click', () => {
     selectedCat = 'ALL';
@@ -7537,6 +7796,10 @@ function startUniversalGamepadNav() {
   const poll = () => {
     requestAnimationFrame(poll);
     if (document.hidden || state.bindingHomeButton) return;
+    const theme = activeSettings().theme || 'obsidian';
+    // PS3 XMB already has its own dedicated native gamepad navigator (prevents double-stepping / skipping columns!)
+    if (theme === 'xmb') return;
+
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     const pad = Array.from(pads || []).find((p) => p && p.connected);
     if (!pad) return;
@@ -7557,8 +7820,7 @@ function startUniversalGamepadNav() {
     const up = b(12) || axY < -0.55;
     const down = b(13) || axY > 0.55;
 
-    const theme = activeSettings().theme || 'obsidian';
-    if ((left || right || up || down) && now - lastMoveAt > 180) {
+    if ((left || right || up || down) && now - lastMoveAt > 190) {
       lastMoveAt = now;
       const key = left ? 'ArrowLeft' : right ? 'ArrowRight' : up ? 'ArrowUp' : 'ArrowDown';
       window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
@@ -7566,7 +7828,7 @@ function startUniversalGamepadNav() {
 
     if (edge(0)) { // A / Cross
       if (!state.drawerOpen) {
-        if (theme === 'xmb' || theme === 'orbit') {
+        if (theme === 'orbit') {
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
         } else {
           const g = activeGames().find((x) => x.id === state.selectedId);
@@ -7575,15 +7837,13 @@ function startUniversalGamepadNav() {
       }
     }
     if (edge(1)) { // B / Circle
-      const openModal = document.querySelector('.modal-backdrop:not(.hidden)');
+      const openModal = document.querySelector('.modal-backdrop:not(.hidden), .obsidian-media-hub:not(.hidden)');
       if (openModal) {
         openModal.classList.add('hidden');
         obsidianSfx.play('close');
       } else if (state.drawerOpen) {
         closeOptionsDrawer();
         obsidianSfx.play('close');
-      } else if (theme === 'xmb') {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       }
     }
     if (edge(3)) { // Y / Triangle
@@ -7603,7 +7863,245 @@ function startUniversalGamepadNav() {
   requestAnimationFrame(poll);
 }
 
+// Built-In Ad-Blocked Legal Free Games Store
+let storeWebviewEl = null;
+let currentStoreUrl = 'https://store.steampowered.com/genre/Free%20to%20Play/';
+
+function openFreeGamesStore(initialUrl = '') {
+  const modal = document.getElementById('storeBrowserModal');
+  const host = document.getElementById('storeWebviewHost');
+  if (!modal || !host) return;
+  const target = initialUrl || currentStoreUrl;
+  currentStoreUrl = target;
+  if (!storeWebviewEl) {
+    storeWebviewEl = document.createElement('webview');
+    storeWebviewEl.setAttribute('partition', 'persist:glauncher-store');
+    storeWebviewEl.setAttribute('allowpopups', 'false');
+    storeWebviewEl.src = target;
+    host.innerHTML = '';
+    host.appendChild(storeWebviewEl);
+  } else if (initialUrl && storeWebviewEl.src !== initialUrl) {
+    storeWebviewEl.src = initialUrl;
+  }
+  document.querySelectorAll('.store-hub-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.storeUrl === target);
+  });
+  modal.classList.remove('hidden');
+  obsidianSfx.play('open');
+}
+
+// Floating Issue Reporter & Live Dev Inbox Chat Box
+const devInboxReports = new Map();
+let devInboxUnread = 0;
+
+function syncDevInboxAccess() {
+  const isDev = isRoleUnlocked('viera') || (activeProfile()?.roles || []).some((r) => r.tier === 'dev-viera');
+  const devTabBtn = document.getElementById('btnFeedbackTabDev');
+  if (devTabBtn) devTabBtn.classList.toggle('hidden', !isDev);
+  socialClient?.setDevInboxEnabled(isDev);
+}
+
+function renderDevInboxList() {
+  const listEl = document.getElementById('feedbackDevInboxList');
+  const cntEl = document.getElementById('devInboxCount');
+  const fabBadge = document.getElementById('feedbackFabBadge');
+  const reports = Array.from(devInboxReports.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  if (cntEl) cntEl.textContent = String(reports.length);
+  if (fabBadge) {
+    fabBadge.textContent = String(devInboxUnread);
+    fabBadge.classList.toggle('hidden', devInboxUnread <= 0);
+  }
+  if (!listEl) return;
+  if (!reports.length) {
+    listEl.innerHTML = '<div class="fb-msg fb-msg-system">No user reports yet. Reports arrive here live even when you were offline!</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  reports.forEach((rep) => {
+    const card = document.createElement('div');
+    card.className = 'fb-dev-report-card';
+    const timeStr = new Date(rep.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    card.innerHTML = `
+      <div class="fb-dev-report-meta">
+        <span>${rep.author || 'Player'} (${rep.handle || '@player'})</span>
+        <span>${rep.theme || 'obsidian'} • ${timeStr}</span>
+      </div>
+      <div style="font-size:12px; color:#f1f5f9;">${String(rep.message || '').replace(/</g, '&lt;')}</div>
+      <div class="fb-dev-reply-row">
+        <input type="text" class="text-input dev-reply-input" placeholder="Reply directly to ${rep.handle || 'user'}..." style="font-size:11px; padding:4px 8px;" />
+        <button type="button" class="btn-primary btn-xs dev-reply-send">Reply</button>
+      </div>
+    `;
+    card.querySelector('.dev-reply-send')?.addEventListener('click', () => {
+      const inp = card.querySelector('.dev-reply-input');
+      const text = inp?.value.trim();
+      if (!text) return;
+      socialClient?.sendDevReply(rep.handle, {
+        id: `rep-${Date.now()}`,
+        from: activeProfile()?.name || 'Viera • DEV',
+        message: text,
+        createdAt: Date.now()
+      });
+      inp.value = '';
+      obsidianSfx.play('success');
+      showToast(`Reply sent live to ${rep.handle}!`);
+    });
+    listEl.appendChild(card);
+  });
+}
+
+function initFeedbackAndStore() {
+  // Store modal controls
+  document.getElementById('btnCloseStore')?.addEventListener('click', () => {
+    document.getElementById('storeBrowserModal')?.classList.add('hidden');
+  });
+  document.getElementById('storeBrowserModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'storeBrowserModal') e.currentTarget.classList.add('hidden');
+  });
+  document.querySelectorAll('.store-hub-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const u = btn.dataset.storeUrl;
+      if (!u) return;
+      currentStoreUrl = u;
+      if (storeWebviewEl) storeWebviewEl.src = u;
+      document.querySelectorAll('.store-hub-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    });
+  });
+  document.getElementById('btnStoreBack')?.addEventListener('click', () => {
+    if (storeWebviewEl?.canGoBack?.()) storeWebviewEl.goBack();
+  });
+  document.getElementById('btnStoreReload')?.addEventListener('click', () => {
+    storeWebviewEl?.reload?.();
+  });
+  document.getElementById('btnStoreExternal')?.addEventListener('click', () => {
+    api.openExternalUrl?.(storeWebviewEl?.getURL?.() || currentStoreUrl);
+  });
+
+  // Floating Issue Chat Box controls
+  const box = document.getElementById('feedbackChatBox');
+  const fab = document.getElementById('btnToggleFeedbackChat');
+  const tabUser = document.getElementById('btnFeedbackTabUser');
+  const tabDev = document.getElementById('btnFeedbackTabDev');
+  const paneUser = document.getElementById('feedbackUserPane');
+  const paneDev = document.getElementById('feedbackDevPane');
+  const msgList = document.getElementById('feedbackUserMessages');
+  const webhookInput = document.getElementById('devWebhookInput');
+  if (webhookInput) webhookInput.value = activeSettings().feedbackWebhookUrl || '';
+
+  fab?.addEventListener('click', () => {
+    const opening = box?.classList.contains('hidden');
+    box?.classList.toggle('hidden', !opening);
+    if (opening) {
+      devInboxUnread = 0;
+      renderDevInboxList();
+      syncDevInboxAccess();
+    }
+  });
+  document.getElementById('btnCloseFeedback')?.addEventListener('click', () => box?.classList.add('hidden'));
+
+  tabUser?.addEventListener('click', () => {
+    tabUser.classList.add('active');
+    tabDev?.classList.remove('active');
+    paneUser?.classList.remove('hidden');
+    paneDev?.classList.add('hidden');
+  });
+  tabDev?.addEventListener('click', () => {
+    tabDev.classList.add('active');
+    tabUser?.classList.remove('active');
+    paneDev?.classList.remove('hidden');
+    paneUser?.classList.add('hidden');
+    devInboxUnread = 0;
+    renderDevInboxList();
+  });
+
+  document.getElementById('btnSaveDevWebhook')?.addEventListener('click', async () => {
+    activeSettings().feedbackWebhookUrl = webhookInput?.value.trim() || '';
+    await persist();
+    showToast('Discord Webhook saved for external issue alerts!');
+  });
+
+  document.getElementById('btnFeedbackGithub')?.addEventListener('click', () => {
+    const draft = encodeURIComponent(document.getElementById('feedbackMsgInput')?.value.trim() || '');
+    api.openExternalUrl?.(`https://github.com/lostfaithxenia/GLauncher-Alpha/issues/new?title=GLauncher+Feedback&body=${draft}`);
+  });
+
+  document.getElementById('feedbackSendForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inp = document.getElementById('feedbackMsgInput');
+    const text = inp?.value.trim();
+    if (!text) return;
+    const prof = activeProfile();
+    const report = {
+      id: `issue-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      author: prof?.name || 'Player',
+      handle: normalizeHandle(prof?.handle || prof?.name || '@player1'),
+      theme: activeSettings().theme || 'obsidian',
+      version: 'v0.5.0',
+      message: text,
+      createdAt: Date.now()
+    };
+    socialClient?.sendIssueReport(report);
+    if (activeSettings().feedbackWebhookUrl) {
+      api.sendFeedbackWebhook?.({ ...report, webhookUrl: activeSettings().feedbackWebhookUrl });
+    }
+    if (msgList) {
+      const bubble = document.createElement('div');
+      bubble.className = 'fb-msg fb-msg-me';
+      bubble.textContent = text;
+      msgList.appendChild(bubble);
+      msgList.scrollTop = msgList.scrollHeight;
+    }
+    inp.value = '';
+    obsidianSfx.play('success');
+    showToast('💬 Sent directly to Viera on GLauncher!');
+  });
+
+  socialClient?.setIssueCallbacks({
+    onIssueReport: (rep) => {
+      if (!rep?.id || devInboxReports.has(rep.id)) return;
+      devInboxReports.set(rep.id, rep);
+      if (box?.classList.contains('hidden')) {
+        devInboxUnread++;
+        obsidianSfx.play('notify');
+        showToast(`⚡ New Issue Report from ${rep.author || rep.handle}!`);
+      }
+      renderDevInboxList();
+    },
+    onDevReply: (reply) => {
+      if (!reply?.message || !msgList) return;
+      const bubble = document.createElement('div');
+      bubble.className = 'fb-msg fb-msg-dev';
+      bubble.innerHTML = `<strong>⚡ ${reply.from || 'Viera • DEV'}:</strong> ${String(reply.message).replace(/</g, '&lt;')}`;
+      msgList.appendChild(bubble);
+      msgList.scrollTop = msgList.scrollHeight;
+      if (box?.classList.contains('hidden')) {
+        devInboxUnread++;
+        renderDevInboxList();
+        obsidianSfx.play('notify');
+        showToast(`⚡ Dev Reply from ${reply.from || 'Viera'}: ${reply.message}`);
+      }
+    }
+  });
+  syncDevInboxAccess();
+}
+
 function initV040MegaFeatures() {
+  // 0. Smooth Single-Step Mouse Wheel on PS3 XMB (NEVER skips Audio -> Game!)
+  let lastXmbWheelAt = 0;
+  els.xmbShell?.addEventListener('wheel', (ev) => {
+    if (activeSettings().theme !== 'xmb' || state.drawerOpen) return;
+    ev.preventDefault();
+    const now = performance.now();
+    if (now - lastXmbWheelAt < 240) return;
+    lastXmbWheelAt = now;
+    if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY) || ev.shiftKey) {
+      const d = Math.abs(ev.deltaX) > Math.abs(ev.deltaY) ? ev.deltaX : ev.deltaY;
+      stepXmbCategory(d > 0 ? 1 : -1);
+    } else if (Math.abs(ev.deltaY) > 6) {
+      stepXmbItem(ev.deltaY > 0 ? 1 : -1);
+    }
+  }, { passive: false });
+
   // 1. Global Zero-Broken-Images Fallback Guard (PS3 XMB, Obsidian, Orbit, Avatars)
   document.addEventListener('error', (ev) => {
     const img = ev.target;
@@ -7640,6 +8138,19 @@ function initV040MegaFeatures() {
     syncBeatBtn();
     await persist();
   });
+
+  // Hi-Fi Audio Quality EQ Selector
+  const eqSel = document.getElementById('obsMusicEqSelect');
+  if (eqSel) {
+    eqSel.value = activeSettings().audioEqPreset || 'hifi';
+    eqSel.addEventListener('change', async () => {
+      activeSettings().audioEqPreset = eqSel.value;
+      ensureHiFiAudioGraph();
+      applyHiFiEqPreset(eqSel.value);
+      await persist();
+      showToast(`Audio Enhancer: ${eqSel.options[eqSel.selectedIndex]?.text}`);
+    });
+  }
 
   // Orbit Lightbox buttons
   document.getElementById('btnOrbitLightboxClose')?.addEventListener('click', () => {
@@ -7680,13 +8191,25 @@ function initV040MegaFeatures() {
     showToast(`Joining Voice Chat with ${activeFriendPassportHandle}...`);
   });
 
-  // 4. Obsidian UI Sounds & Launch Cinematic Settings
+  // 4. Obsidian Soft UI Sounds, Volume Slider & Launch Cinematic Settings
   const obsSfxCheck = document.getElementById('settingObsidianSounds');
+  const obsSfxVol = document.getElementById('settingObsidianSfxVol');
   if (obsSfxCheck) {
     obsSfxCheck.checked = activeSettings().obsidianSounds !== false;
     obsSfxCheck.addEventListener('change', async () => {
       activeSettings().obsidianSounds = obsSfxCheck.checked;
       obsidianSfx.enabled = obsSfxCheck.checked;
+      await persist();
+    });
+  }
+  if (obsSfxVol) {
+    const curVol = Math.round((activeSettings().obsidianSfxVolume ?? 0.22) * 100);
+    obsSfxVol.value = String(curVol);
+    obsidianSfx.setVolume(curVol / 100);
+    obsSfxVol.addEventListener('input', async () => {
+      const v = Number(obsSfxVol.value) / 100;
+      activeSettings().obsidianSfxVolume = v;
+      obsidianSfx.setVolume(v);
       await persist();
     });
   }
@@ -7711,8 +8234,9 @@ function initV040MegaFeatures() {
     }
   });
 
-  // 6. Initialize Asset Vault (697+), Beat Engine & Universal Gamepad Navigation
+  // 6. Initialize Asset Vault (83 Built-In + 697 Total), Beat Engine, Gamepad Nav, Store & Dev Issue Chat
   initAssetVault();
   startOrbitBeatEngine();
   startUniversalGamepadNav();
+  initFeedbackAndStore();
 }

@@ -1,20 +1,19 @@
 {
-  "version": "0.4.0",
-  "title": "GLauncher v0.4.0 — Asset Vault (697+ Decorations), Orbit v2, Obsidian SFX & Cartoon Polish",
-  "asarUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.4.0/app.asar",
-  "downloadUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.4.0/GLauncher-Setup-0.4.0.exe",
+  "version": "0.5.0",
+  "title": "GLauncher v0.5.0 — Bold Obsidian/Orbit Revamp, Built-In Decorations, Hi-Fi Audio, Free Store & Live Dev Chat",
+  "asarUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.5.0/app.asar",
+  "downloadUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.5.0/GLauncher-Setup-0.5.0.exe",
   "notes": [
-    "NEW In-App Asset Vault (697+ Animated Avatar Decorations across 68 categories from discord-decoration.art) + Paste ANY GIF/WebP/PNG/MP4 URL — automatically cached offline forever!",
-    "Buttery Cartoonish Discord-Style Spring Revamp: bouncy overshoot physics, tactile click squish, glossy surfaces & 14 crisp CC0 Obsidian & Orbit UI Sound Effects!",
-    "Role-Driven Animated Username Colors & Effects + Custom Role Name FX Picker (Liquid Gold, Molten Flame, Cyber Electric, Prismatic Holo, Glitch Neon, Rainbow Wave, Neon Pulse)",
-    "Name-Locked & Code-Locked VIP Roles (✦ JOSHUA & ✦ RUBEN) — permanently saved across all future updates once unlocked!",
-    "Orbit 3D Bubbles v2: Audio-Reactive Music Beat Pulse, Clickable Fullscreen Cinema Lightbox & 4 Bubble Styles (Crystal Glass, Neon Hologram, Frosted Prism, Iridescent Soap)",
-    "Live Friends Holographic Passport Peek + Real Role Colors & Animations synced to Friends List & In-Game Voice Chat HUD",
-    "Real Per-Game Playtime Tracker & Most-Played Showcase + Customizable Game Launch Cinematics (Cartoon Pop, 3D Disc Spin, PS3 Gloss)",
-    "1-Click Automatic Live Patcher (downloads 22 MB app.asar directly in-app and relaunches in seconds!) + Universal Xbox/PS Controller Navigation"
+    "Bold Colorful Cartoon-Bulk Revamp for Obsidian & Orbit: vibrant animated aurora backdrops, chunky 3D-lipped color-coded rail buttons, glossy pressable controls & livelier animations (PS3 XMB stays 100% pure!)",
+    "83 Animated Discord Avatar Decorations downloaded & bundled directly inside GLauncher for instant offline use + all 697 searchable in Asset Vault",
+    "Working Music, Videos & Photos in BOTH Obsidian & Orbit sharing the exact same ps3_audio / ps3_video / ps3_pic folders — now with Real Embedded Song Cover Art & Studio Hi-Fi Audio Quality Enhancer (Hi-Fi+, Bass+, Vocal, Flat EQ)",
+    "New Built-In Ad-Blocked Free Games Store (Steam Free, Epic Weekly Free, Itch.io Free, GOG Free)",
+    "New Floating Issue & Feedback Chat Box: users type bugs/ideas straight to Viera's live in-launcher Dev Inbox (plus optional Discord Webhook & GitHub Issues!) with live 2-way Dev replies",
+    "Code-Locked Dev Role (⚡ VIERA • DEV) + Soft, Silky Obsidian UI Sound Effects with dedicated Volume Slider"
   ],
   "fixes": [
-    "Fixed all broken image squares on PS3 XMB, Obsidian, Orbit & Avatars with automatic glowing disc/avatar fallbacks",
-    "Fixed role persistence when clearing all roles and preserved unlocked secret roles permanently across every update"
+    "Fixed PS3 XMB scroll/navigation skipping over sections (e.g. Photo -> Game skipping Music) via single-step cooldown & removing duplicate gamepad trigger",
+    "Fixed Obsidian Media Hub Videos & Photos tabs (corrected deviceMedia keys & tab attribute) and fixed Orbit Music tab crash",
+    "Fixed audio silently muting on first play by resuming Hi-Fi Web Audio graph safely on playback"
   ]
 }

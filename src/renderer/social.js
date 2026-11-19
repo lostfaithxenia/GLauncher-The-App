@@ -89,6 +89,34 @@ export class SocialClient {
     this.peers = new Map(); // remoteHandle -> { pc, audioEl, speaking, name, avatar, muted }
     this.audioCtx = null;
     this.vadTimer = null;
+    this.isDevInboxEnabled = false;
+    this.onIssueReport = null;
+    this.onDevReply = null;
+  }
+
+  setIssueCallbacks({ onIssueReport, onDevReply }) {
+    this.onIssueReport = onIssueReport;
+    this.onDevReply = onDevReply;
+  }
+
+  setDevInboxEnabled(enabled) {
+    this.isDevInboxEnabled = Boolean(enabled);
+    if (this.connected && this.isDevInboxEnabled) {
+      this.subscribeTopic(`${TOPIC_PREFIX}/dev-inbox/reports/#`);
+    }
+  }
+
+  sendIssueReport(report) {
+    if (!report?.id) return false;
+    this.publish(`${TOPIC_PREFIX}/dev-inbox/reports/${report.id}`, report, true);
+    return this.connected;
+  }
+
+  sendDevReply(targetHandle, replyObj) {
+    const h = normalizeHandle(targetHandle);
+    if (!h || !replyObj) return false;
+    this.publish(`${TOPIC_PREFIX}/dev-inbox/replies/${h}/${replyObj.id || Date.now()}`, replyObj, true);
+    return this.connected;
   }
 
   setProfileAndGame(profile, runningGame) {
@@ -200,6 +228,10 @@ export class SocialClient {
         this.onStatusChange?.(true);
         const myHandle = normalizeHandle(this.myProfile?.handle || this.myProfile?.name || '@player1');
         this.subscribeTopic(`${TOPIC_PREFIX}/signal/${myHandle}`);
+        this.subscribeTopic(`${TOPIC_PREFIX}/dev-inbox/replies/${myHandle}/#`);
+        if (this.isDevInboxEnabled) {
+          this.subscribeTopic(`${TOPIC_PREFIX}/dev-inbox/reports/#`);
+        }
         this.subscribeFriends();
         this.publishPresence();
         this.pingTimer = setInterval(() => {
@@ -293,6 +325,10 @@ export class SocialClient {
       this.onFriendsUpdate?.(this.getFriendsSnapshot());
     } else if (topic.startsWith(`${TOPIC_PREFIX}/signal/`)) {
       this.handleSignal(data);
+    } else if (topic.startsWith(`${TOPIC_PREFIX}/dev-inbox/reports/`)) {
+      this.onIssueReport?.(data);
+    } else if (topic.startsWith(`${TOPIC_PREFIX}/dev-inbox/replies/`)) {
+      this.onDevReply?.(data);
     }
   }
 

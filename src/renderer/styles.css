@@ -6733,3 +6733,507 @@ body.theme-xmb.xmb-light-bg .xmb-hints img {
   letter-spacing: 0.24em;
   color: #7dd3fc;
 }
+
+/* =========================================================
+   v0.5.0 BOLD COLORFUL CHUNKY REVAMP (OBSIDIAN & ORBIT ONLY)
+   PS3 XMB IS 100% UNTOUCHED!
+   ========================================================= */
+@keyframes vibrantAuroraDrift {
+  0% { background-position: 0% 50%; filter: saturate(1.25) hue-rotate(0deg); }
+  50% { background-position: 100% 50%; filter: saturate(1.45) hue-rotate(14deg); }
+  100% { background-position: 0% 50%; filter: saturate(1.25) hue-rotate(0deg); }
+}
+
+@keyframes btnGlossSweep {
+  0%, 70% { transform: translateX(-140%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+
+@keyframes floatBobSoft {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Vibrant Animated Color Atmosphere on Obsidian & Orbit */
+body.theme-obsidian .obsidian-hero-backdrop,
+body.theme-orbit .obsidian-hero-backdrop {
+  background:
+    radial-gradient(circle at 16% 20%, rgba(124, 58, 237, 0.42), transparent 46%),
+    radial-gradient(circle at 84% 18%, rgba(14, 165, 233, 0.38), transparent 45%),
+    radial-gradient(circle at 75% 84%, rgba(236, 72, 153, 0.34), transparent 48%),
+    radial-gradient(circle at 22% 82%, rgba(16, 185, 129, 0.24), transparent 46%),
+    linear-gradient(145deg, #0b1024 0%, #111633 50%, #090d1c 100%) !important;
+  background-size: 180% 180% !important;
+  animation: vibrantAuroraDrift 18s ease-in-out infinite !important;
+}
+
+/* Chunkier, More Tactile Discord-Cartoon Left Rail (Obsidian Only) */
+body.theme-obsidian .launcher-rail {
+  padding: 12px 9px !important;
+  gap: 9px !important;
+  border-radius: 26px !important;
+  background: linear-gradient(175deg, rgba(22, 30, 58, 0.92), rgba(11, 16, 34, 0.94)) !important;
+  border: 2px solid rgba(129, 140, 248, 0.38) !important;
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.62),
+    0 0 32px rgba(99, 102, 241, 0.22),
+    inset 0 2px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+body.theme-obsidian .rail-btn {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 16px !important;
+  border: 2px solid rgba(255, 255, 255, 0.14) !important;
+  background: rgba(30, 41, 78, 0.72) !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 4px 0 rgba(4, 7, 18, 0.72), inset 0 1.5px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+body.theme-obsidian .rail-btn:hover {
+  transform: translateX(4px) translateY(-2px) scale(1.1) !important;
+  border-color: rgba(255, 255, 255, 0.52) !important;
+}
+
+body.theme-obsidian .rail-btn:active {
+  transform: translateY(2px) scale(0.92) !important;
+  box-shadow: 0 1px 0 rgba(4, 7, 18, 0.85) !important;
+}
+
+body.theme-obsidian .rail-btn[data-rail="stage"] { background: linear-gradient(145deg, rgba(14, 165, 233, 0.35), rgba(59, 130, 246, 0.22)) !important; color: #7dd3fc !important; }
+body.theme-obsidian .rail-btn[data-rail="shelf"] { background: linear-gradient(145deg, rgba(139, 92, 246, 0.35), rgba(99, 102, 241, 0.22)) !important; color: #c4b5fd !important; }
+body.theme-obsidian .rail-btn[data-rail="orbit"] { background: linear-gradient(145deg, rgba(236, 72, 153, 0.35), rgba(56, 189, 248, 0.25)) !important; color: #f9a8d4 !important; }
+body.theme-obsidian .rail-btn[data-rail="trophies"] { background: linear-gradient(145deg, rgba(245, 158, 11, 0.35), rgba(234, 179, 8, 0.2)) !important; color: #fde047 !important; }
+body.theme-obsidian .rail-btn[data-rail="media"] { background: linear-gradient(145deg, rgba(16, 185, 129, 0.38), rgba(20, 184, 166, 0.22)) !important; color: #6ee7b7 !important; }
+body.theme-obsidian .rail-btn[data-rail="store"] { background: linear-gradient(145deg, rgba(244, 63, 94, 0.4), rgba(249, 115, 22, 0.25)) !important; color: #fda4af !important; }
+body.theme-obsidian .rail-btn[data-rail="friends"] { background: linear-gradient(145deg, rgba(88, 101, 242, 0.45), rgba(99, 102, 241, 0.28)) !important; color: #c7d2fe !important; }
+body.theme-obsidian .rail-btn[data-rail="profile"] { background: linear-gradient(145deg, rgba(168, 85, 247, 0.4), rgba(236, 72, 153, 0.25)) !important; color: #f0abfc !important; }
+body.theme-obsidian .rail-btn[data-rail="add"] { background: linear-gradient(145deg, rgba(34, 197, 94, 0.42), rgba(14, 165, 233, 0.25)) !important; color: #86efac !important; }
+
+body.theme-obsidian .rail-btn.active {
+  background: linear-gradient(135deg, #5865f2, #38bdf8) !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 5px 0 #1d4ed8, 0 0 24px rgba(56, 189, 248, 0.6) !important;
+}
+
+/* Chunkier Cartoon Tactile Buttons & Stage Dock on Obsidian & Orbit */
+body:not(.theme-xmb) .btn-primary {
+  position: relative;
+  overflow: hidden;
+  padding: 10px 18px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  border-radius: 15px !important;
+  border: 2px solid rgba(255, 255, 255, 0.26) !important;
+  background: linear-gradient(135deg, #5865f2 0%, #38bdf8 55%, #a855f7 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 5px 0 rgba(30, 27, 75, 0.85), 0 10px 26px rgba(88, 101, 242, 0.42), inset 0 2px 0 rgba(255, 255, 255, 0.38) !important;
+}
+
+body:not(.theme-xmb) .btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: btnGlossSweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+body:not(.theme-xmb) .btn-primary:active {
+  transform: translateY(3px) scale(0.95) !important;
+  box-shadow: 0 2px 0 rgba(30, 27, 75, 0.9) !important;
+}
+
+body:not(.theme-xmb) .btn-secondary {
+  border-radius: 14px !important;
+  border: 2px solid rgba(148, 163, 184, 0.26) !important;
+  background: linear-gradient(160deg, rgba(30, 41, 74, 0.9), rgba(15, 23, 46, 0.92)) !important;
+  box-shadow: 0 4px 0 rgba(5, 8, 20, 0.72), inset 0 1.5px 0 rgba(255, 255, 255, 0.16) !important;
+  font-weight: 800;
+}
+
+body.theme-obsidian .stage-dock,
+body.theme-obsidian .corner-profile-btn {
+  border-radius: 22px !important;
+  border-width: 2px !important;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.55), 0 0 28px rgba(88, 101, 242, 0.24), inset 0 2px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Chunkier, More Colorful Orbit 3D Bubbles Theme */
+body.theme-orbit .orbit-topbar {
+  padding: 12px 18px !important;
+  border-radius: 22px !important;
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.88), rgba(15, 23, 52, 0.9)) !important;
+  border: 2px solid rgba(129, 140, 248, 0.42) !important;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5), 0 0 32px rgba(168, 85, 247, 0.22) !important;
+}
+
+body.theme-orbit .orbit-cat-btn {
+  padding: 9px 16px !important;
+  border-radius: 14px !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  border: 2px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(30, 41, 78, 0.72) !important;
+  box-shadow: 0 4px 0 rgba(5, 8, 22, 0.7) !important;
+}
+
+body.theme-orbit .orbit-cat-btn.active {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6, #38bdf8) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 0 5px 0 rgba(76, 29, 149, 0.85), 0 0 22px rgba(236, 72, 153, 0.5) !important;
+  transform: translateY(-2px) scale(1.05);
+}
+
+body.theme-orbit .orbit-dropdown-col {
+  background: linear-gradient(170deg, rgba(22, 27, 56, 0.86), rgba(11, 15, 34, 0.9)) !important;
+  border: 2px solid rgba(129, 140, 248, 0.34) !important;
+  border-radius: 24px !important;
+  padding: 16px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 2px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+body.theme-orbit .orbit-row {
+  padding: 12px 14px !important;
+  border-radius: 18px !important;
+  border: 2px solid rgba(255, 255, 255, 0.12) !important;
+  background: linear-gradient(135deg, rgba(30, 41, 76, 0.78), rgba(15, 23, 46, 0.86)) !important;
+  box-shadow: 0 5px 0 rgba(6, 10, 24, 0.7) !important;
+}
+
+body.theme-orbit .orbit-row:hover,
+body.theme-orbit .orbit-row.active {
+  border-color: #38bdf8 !important;
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.42), rgba(236, 72, 153, 0.28)) !important;
+  transform: translateX(6px) scale(1.025) !important;
+  box-shadow: 0 6px 0 rgba(30, 27, 75, 0.85), 0 12px 28px rgba(56, 189, 248, 0.34) !important;
+}
+
+/* Revamped Music Pill with Real Song Cover Art & Hi-Fi EQ */
+.obsidian-music-pill.revamped {
+  border-radius: 22px !important;
+  border: 2px solid rgba(129, 140, 248, 0.48) !important;
+  background: linear-gradient(145deg, rgba(22, 28, 58, 0.95), rgba(11, 16, 36, 0.96)) !important;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.68), 0 0 30px rgba(139, 92, 246, 0.26) !important;
+  padding: 12px 16px !important;
+}
+
+.obs-music-art-badge {
+  position: relative;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+  border: 2px solid rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+  flex-shrink: 0;
+}
+
+.obs-music-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 2;
+}
+
+.obs-eq-select {
+  height: 28px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 10px;
+  max-width: 96px;
+  background: rgba(88, 101, 242, 0.28);
+  border-color: rgba(129, 140, 248, 0.5);
+  color: #e0e7ff;
+}
+
+/* =========================================================
+   BUILT-IN FREE GAMES STORE (ADBLOCK PROTECTED)
+   ========================================================= */
+.store-browser-card {
+  width: min(94vw, 1280px);
+  height: min(88vh, 820px);
+  background: linear-gradient(160deg, rgba(18, 24, 52, 0.98), rgba(9, 13, 28, 0.99));
+  border: 2px solid rgba(129, 140, 248, 0.45);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 28px 85px rgba(0, 0, 0, 0.82), 0 0 42px rgba(88, 101, 242, 0.25);
+  animation: cartoonPopIn 0.32s var(--ease-spring) both;
+}
+
+.store-browser-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(10, 14, 30, 0.92);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.12);
+  flex-wrap: wrap;
+}
+
+.store-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.store-brand h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.store-adblock-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  background: rgba(16, 185, 129, 0.22);
+  border: 1.5px solid rgba(52, 211, 153, 0.65);
+  color: #6ee7b7;
+}
+
+.store-hub-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.store-hub-btn {
+  padding: 7px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  background: rgba(30, 41, 78, 0.72);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.store-hub-btn.active {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.store-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.store-webview-host {
+  flex: 1;
+  position: relative;
+  background: #070912;
+}
+
+.store-webview-host webview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+/* =========================================================
+   FLOATING ISSUE / FEEDBACK CHAT BOX & LIVE DEV INBOX
+   ========================================================= */
+body.theme-xmb .feedback-float-wrap {
+  display: none !important;
+}
+
+.feedback-float-wrap {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 950;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.feedback-fab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.34);
+  background: linear-gradient(135deg, #5865f2, #ec4899);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(49, 46, 129, 0.9), 0 12px 30px rgba(88, 101, 242, 0.5);
+  animation: floatBobSoft 3.6s ease-in-out infinite;
+}
+
+.feedback-fab-btn:hover {
+  transform: translateY(-3px) scale(1.06);
+}
+
+.feedback-fab-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #facc15;
+  color: #090d18;
+  font-size: 11px;
+  font-weight: 900;
+  display: inline-grid;
+  place-items: center;
+}
+
+.feedback-chat-box {
+  width: 360px;
+  max-width: calc(100vw - 36px);
+  background: linear-gradient(165deg, rgba(20, 26, 54, 0.97), rgba(10, 14, 30, 0.98));
+  border: 2px solid rgba(129, 140, 248, 0.48);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 24px 68px rgba(0, 0, 0, 0.78), 0 0 34px rgba(88, 101, 242, 0.28);
+  animation: cartoonPopIn 0.28s var(--ease-spring) both;
+}
+
+.feedback-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.32), rgba(236, 72, 153, 0.22));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.feedback-head-title {
+  font-size: 13.5px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.feedback-head-sub {
+  font-size: 10.5px;
+  color: #cbd5e1;
+}
+
+.feedback-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fb-tab-btn {
+  padding: 4px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 23, 42, 0.65);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fb-tab-btn.active {
+  background: #5865f2;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.dev-inbox-pill {
+  background: #facc15;
+  color: #090d18;
+  border-radius: 999px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.feedback-pane {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedback-msg-list {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-right: 2px;
+}
+
+.fb-msg {
+  padding: 8px 11px;
+  border-radius: 14px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fb-msg-system {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #bae6fd;
+}
+
+.fb-msg-me {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #5865f2, #38bdf8);
+  color: #ffffff;
+  font-weight: 600;
+  max-width: 88%;
+}
+
+.fb-msg-dev {
+  align-self: flex-start;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.22), rgba(99, 102, 241, 0.24));
+  border: 1px solid rgba(34, 211, 238, 0.5);
+  color: #e0f2fe;
+  max-width: 92%;
+}
+
+.fb-dev-report-card {
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(129, 140, 248, 0.32);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fb-dev-report-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #7dd3fc;
+}
+
+.fb-dev-reply-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.feedback-input-row,
+.feedback-webhook-bar {
+  display: flex;
+  gap: 6px;
+}
+
+.feedback-ext-row {
+  display: flex;
+  justify-content: flex-end;
+}

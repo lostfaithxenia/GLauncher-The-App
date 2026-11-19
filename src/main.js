@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -46,6 +46,9 @@ const DEFAULT_SETTINGS = {
   orbitBubbleStyle: 'crystal', // 'crystal' | 'neon' | 'prism' | 'soap'
   orbitAudioReactive: true,
   obsidianSounds: true,
+  obsidianSfxVolume: 0.22,
+  audioEqPreset: 'hifi', // 'hifi' | 'bass' | 'vocal' | 'flat'
+  feedbackWebhookUrl: '',
   launchCinematic: 'cartoon', // 'cartoon' | 'disc' | 'ps3' | 'instant'
   backdropMode: 'aurora', // 'aurora' | 'starfield' | 'cybergrid' | 'xmb-wave' | 'clean'
   glassStyle: 'liquid', // 'liquid' | 'carbon' | 'matte'
@@ -735,7 +738,32 @@ async function fetchAndDownloadTrailer(title, steamTrailerUrl = '', preferGamepl
   return runYtDlpSearch(ytDlp, q2, outTpl);
 }
 
+let storeAdBlockerReady = false;
+function initStoreAdBlocker() {
+  if (storeAdBlockerReady) return;
+  storeAdBlockerReady = true;
+  try {
+    const storeSess = session.fromPartition('persist:glauncher-store');
+    const BLOCKED_DOMAINS = [
+      'doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adservice.google.',
+      'googletagmanager.com', 'google-analytics.com', 'taboola.com', 'outbrain.com',
+      'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com', 'exoclick.com',
+      'adnxs.com', 'criteo.com', 'amazon-adsystem.com', 'scorecardresearch.com',
+      'quantserve.com', 'hotjar.com', 'clarity.ms', 'adsrvr.org', 'pubmatic.com',
+      'rubiconproject.com', 'openx.net', 'casalemedia.com', 'moatads.com', 'mgid.com',
+      'revcontent.com', 'zedo.com', 'adroll.com', 'clickadu.com', 'hilltopads.net',
+      'trafficjunky.net', 'juicyads.com', 'monetag.com', 'onclkds.com', 'acscdn.com'
+    ];
+    storeSess.webRequest.onBeforeRequest((details, callback) => {
+      const u = String(details.url || '').toLowerCase();
+      const blocked = BLOCKED_DOMAINS.some((d) => u.includes(d)) || /\/ads?\/|\/popunder|\/banners?\//i.test(u);
+      callback({ cancel: blocked });
+    });
+  } catch {}
+}
+
 function createMainWindow(query = null) {
+  initStoreAdBlocker();
   const iconPath = path.join(__dirname, '..', 'build', 'icon.png');
   mainWindow = new BrowserWindow({
     width: 1340,
@@ -750,8 +778,14 @@ function createMainWindow(query = null) {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      webviewTag: true
     }
+  });
+
+  // Block intrusive ad popups opened by embedded store webviews
+  mainWindow.webContents.on('did-attach-webview', (_ev, wc) => {
+    wc.setWindowOpenHandler(() => ({ action: 'deny' }));
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'), query ? { query } : undefined);
@@ -2062,22 +2096,36 @@ ipcMain.handle('dialog:pickAudio', async () => {
   return pathToFileURL(destPath).href;
 });
 
+function findFolderCoverArt(dirPath) {
+  try {
+    const names = ['cover.jpg', 'cover.png', 'cover.webp', 'folder.jpg', 'folder.png', 'album.jpg', 'front.jpg', 'front.png'];
+    for (const n of names) {
+      const p = path.join(dirPath, n);
+      if (fs.existsSync(p)) return pathToFileURL(p).href;
+    }
+  } catch {}
+  return '';
+}
+
 function readAudioTags(filePath) {
-  const tags = { title: '', artist: '', album: '' };
+  const tags = { title: '', artist: '', album: '', coverUrl: '' };
   try {
     const fd = fs.openSync(filePath, 'r');
     const stat = fs.fstatSync(fd);
-    const head = Buffer.alloc(Math.min(16384, stat.size));
-    fs.readSync(fd, head, 0, head.length, 0);
+    const initial = Buffer.alloc(Math.min(10, stat.size));
+    fs.readSync(fd, initial, 0, initial.length, 0);
 
-    // 1. Check ID3v2 header ("ID3")
-    if (head.length > 10 && head.toString('ascii', 0, 3) === 'ID3') {
-      const ver = head[3];
+    // 1. Check ID3v2 header ("ID3") and read enough bytes for APIC cover art!
+    if (initial.length === 10 && initial.toString('ascii', 0, 3) === 'ID3') {
+      const ver = initial[3];
       const tagSize =
-        ((head[6] & 0x7f) << 21) |
-        ((head[7] & 0x7f) << 14) |
-        ((head[8] & 0x7f) << 7) |
-        (head[9] & 0x7f);
+        ((initial[6] & 0x7f) << 21) |
+        ((initial[7] & 0x7f) << 14) |
+        ((initial[8] & 0x7f) << 7) |
+        (initial[9] & 0x7f);
+      const readLen = Math.min(stat.size, 10 + tagSize, 2 * 1024 * 1024);
+      const head = Buffer.alloc(readLen);
+      fs.readSync(fd, head, 0, readLen, 0);
       const limit = Math.min(head.length, 10 + tagSize);
       let pos = 10;
       while (pos + 10 < limit) {
@@ -2103,6 +2151,36 @@ function readAudioTags(filePath) {
           if (frameId === 'TIT2' && val) tags.title = val;
           if (frameId === 'TPE1' && val) tags.artist = val;
           if (frameId === 'TALB' && val) tags.album = val;
+        } else if (frameId === 'APIC' && !tags.coverUrl && fSize > 16) {
+          try {
+            const payload = head.subarray(pos + 10, pos + 10 + fSize);
+            const enc = payload[0];
+            let p = 1;
+            const mimeEnd = payload.indexOf(0, p);
+            if (mimeEnd > 0) {
+              const mime = payload.subarray(p, mimeEnd).toString('latin1').toLowerCase();
+              p = mimeEnd + 2; // skip null + picture type byte
+              // skip description
+              if (enc === 1 || enc === 2) {
+                while (p + 1 < payload.length && !(payload[p] === 0 && payload[p + 1] === 0)) p += 2;
+                p += 2;
+              } else {
+                const descEnd = payload.indexOf(0, p);
+                p = descEnd >= 0 ? descEnd + 1 : p;
+              }
+              const imgBuf = payload.subarray(p);
+              if (imgBuf.length > 256) {
+                ensureDirs();
+                const ext = mime.includes('png') ? '.png' : mime.includes('webp') ? '.webp' : '.jpg';
+                const hash = crypto.createHash('sha1').update(`${filePath}:${stat.size}`).digest('hex').slice(0, 16);
+                const coverFile = path.join(ASSET_CACHE_DIR, `songcover-${hash}${ext}`);
+                if (!fs.existsSync(coverFile)) {
+                  fs.writeFileSync(coverFile, imgBuf);
+                }
+                tags.coverUrl = pathToFileURL(coverFile).href;
+              }
+            }
+          } catch {}
         }
         pos += 10 + fSize;
       }
@@ -2125,6 +2203,9 @@ function readAudioTags(filePath) {
   } catch {
     // ignore tag parse errors
   }
+  if (!tags.coverUrl) {
+    tags.coverUrl = findFolderCoverArt(path.dirname(filePath));
+  }
   return tags;
 }
 
@@ -2145,6 +2226,7 @@ function scanMediaDir(dirPath, exts, limit = 100, isAudio = false) {
             title: tags?.title || path.basename(entry.name, ext),
             artist: tags?.artist || '',
             album: tags?.album || '',
+            coverUrl: tags?.coverUrl || '',
             url: pathToFileURL(full).href,
             folder: dirPath,
             subFolder: ''
@@ -2164,6 +2246,7 @@ function scanMediaDir(dirPath, exts, limit = 100, isAudio = false) {
               title: tags?.title || path.basename(sEntry.name, ext),
               artist: tags?.artist || '',
               album: tags?.album || entry.name,
+              coverUrl: tags?.coverUrl || '',
               url: pathToFileURL(subFull).href,
               folder: full,
               subFolder: entry.name
@@ -2177,6 +2260,45 @@ function scanMediaDir(dirPath, exts, limit = 100, isAudio = false) {
   }
   return results;
 }
+
+ipcMain.handle('feedback:sendWebhook', async (_event, payload) => {
+  const hookUrl = String(payload?.webhookUrl || '').trim();
+  if (!/^https?:\/\//i.test(hookUrl)) return { ok: false, error: 'NO_WEBHOOK' };
+  try {
+    const body = JSON.stringify({
+      username: 'GLauncher Issue Reporter',
+      embeds: [
+        {
+          title: `💬 New Issue Report (${payload?.version || 'GLauncher'})`,
+          description: String(payload?.message || '').slice(0, 1800),
+          color: 3849208,
+          fields: [
+            { name: 'From', value: `${payload?.author || 'Player'} (${payload?.handle || '@player'})`, inline: true },
+            { name: 'Theme', value: String(payload?.theme || 'obsidian'), inline: true }
+          ],
+          timestamp: new Date().toISOString()
+        }
+      ]
+    });
+    const res = await fetch(hookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    return { ok: res.ok, status: res.status };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('system:openExternal', (_event, targetUrl) => {
+  const u = String(targetUrl || '').trim();
+  if (/^https?:\/\//i.test(u)) {
+    shell.openExternal(u);
+    return true;
+  }
+  return false;
+});
 
 ipcMain.handle('media:getFolderStatus', () => {
   return {
@@ -2207,8 +2329,12 @@ ipcMain.handle('media:openFolder', (_event, kind) => {
   ensureDirs();
   const map = {
     pic: PS3_PIC_DIR,
+    photos: PS3_PIC_DIR,
+    pictures: PS3_PIC_DIR,
     video: PS3_VIDEO_DIR,
+    videos: PS3_VIDEO_DIR,
     audio: PS3_AUDIO_DIR,
+    music: PS3_AUDIO_DIR,
     devicePic: app.getPath('pictures'),
     deviceVideo: app.getPath('videos'),
     deviceAudio: app.getPath('music')
