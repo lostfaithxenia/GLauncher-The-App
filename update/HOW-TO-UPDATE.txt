@@ -1,5 +1,5 @@
 ====================================================================
-            GLauncher v0.3.0 - Orbit Update (Safe Update)
+      GLauncher v0.3.1 - Holographic Gamer Passport (Safe Update)
 ====================================================================
 
 ALL YOUR CUSTOMIZATION IS 100% SAFE!
@@ -9,24 +9,23 @@ are never deleted when updating.
 2 EASY WAYS TO UPDATE ANY PREVIOUSLY INSTALLED GLAUNCHER:
 --------------------------------------------------------------------
 OPTION 1 (Fastest — 2-Second Drag & Drop):
-  - Copy "app.asar" into your GLauncher\resources\ folder
-    (OR double-click "Drop-In-Update-v0.3.0.bat" to auto-apply it!).
-  - From v0.3.0 onward, you can also drag & drop future app.asar or
-    GLauncher update files directly onto the GLauncher window!
+  - Drag "app.asar" directly onto your open GLauncher window (v0.3.0+),
+    OR double-click "Drop-In-Update-v0.3.1.bat" to auto-apply it!
 
 OPTION 2 (Standard Installer):
-  - Close GLauncher and run "GLauncher-Setup-0.3.0.exe".
+  - Close GLauncher and run "GLauncher-Setup-0.3.1.exe".
 
-WHAT'S NEW IN v0.3.0:
+WHAT'S NEW IN v0.3.1:
 --------------------------------------------------------------------
-  * NEW Theme: Orbit 3D Bubbles — PS3-style dropdown list + floating
-    3D glass spheres that hold your Pictures, GIFs & looping Videos!
-  * Exclusive Special Roles:
-      - ⚡ Viera • DEV
-      - 👑✦ Joshua (Super Special)
-      - 🔥✦ Ruben (Super Special)
-  * 12 real 60fps Canvas animated Profile Effects + 9 animated SVG
-    Avatar Decorations + Upload Custom GIF/APNG/SVG support
-  * Real per-game trophy detection (Steam & Minecraft Advancements)
-    with live in-game trophy popups
+  * Original GLauncher Holographic Gamer Passport Profile Studio:
+      - Wide holographic hero card on top (live 3D spinning disc,
+        Trophy Level, revamped 3D foil roles, animated status pill)
+      - Horizontal pill nav bar + spacious 2-column dock (no squishing!)
+  * True 3D WebGL Interactive Profile Effects (Three.js parallax orbs,
+    cosmic rings, crystals, petals, embers) + 12 Animated WebP Assets
+  * Revamped 3D Foil Collector Roles with metallic sheen & animated
+    icons (Viera DEV, Joshua, Ruben, Founder, Streamer, VIP)
+  * PS3 XMB Auto-Contrast Text: auto-switches text/icons to black on
+    white/light backgrounds and white on dark/black backgrounds
+  * Fixed game-exit black/white transition screen
 ====================================================================

@@ -2,6 +2,7 @@ import { Stage3D } from './stage3d.js';
 import { BackdropRenderer, XMB_BG_COLORS } from './backdrop.js';
 import { SocialClient, normalizeHandle } from './social.js';
 import { ProfileEffectCanvas } from './profile-fx.js';
+import { Passport3DStage, PassportMiniDisc3D } from './passport3d.js';
 import { XmbAudio, runPs3Intro, cancelPs3Intro, runPs3GameLaunchSplash } from './xmb-media.js';
 
 const api = window.launcherAPI;
@@ -897,6 +898,9 @@ function applyProfileThemeAndGraphics() {
     stage3d.setQuality(settings.graphicsQuality || 'high');
   }
   syncMusicBarsUi();
+  if (typeof updateXmbAutoContrast === 'function') {
+    updateXmbAutoContrast();
+  }
 }
 
 function renderProfileCardAndHud() {
@@ -972,11 +976,11 @@ function renderProfileCardAndHud() {
     els.profileCardRolesList.innerHTML = '';
     (profile.roles || []).forEach((r) => {
       const tier = r.tier || 'standard';
+      const animSrc = typeof getRoleAnimIcon === 'function' ? getRoleAnimIcon(r) : './assets/profile-fx/animated/star.webp';
       const pill = document.createElement('span');
-      pill.className = `profile-role-pill role-tier-${tier}`;
-      pill.style.borderColor = `${r.color || '#38bdf8'}88`;
-      const tierTag = tier === 'mythic' ? '🔥 ' : tier === 'super' ? '✦ ' : '';
-      pill.innerHTML = `<span class="profile-role-dot" style="background:${r.color || '#38bdf8'}; box-shadow: 0 0 8px ${r.color || '#38bdf8'}"></span>${tierTag}${r.name}`;
+      pill.className = `foil-role-emblem role-tier-${tier}`;
+      pill.style.borderColor = `${r.color || '#38bdf8'}`;
+      pill.innerHTML = `<img class="foil-role-anim" src="${animSrc}" alt="" /><span>${r.name}</span>`;
       els.profileCardRolesList.appendChild(pill);
     });
   }
@@ -1259,13 +1263,13 @@ function renderProfileRolesEditor() {
   els.profileRolesEditorList.innerHTML = '';
   profile.roles.forEach((r) => {
     const tier = r.tier || 'standard';
-    const tierTag = tier === 'mythic' ? '🔥 ' : tier === 'super' ? '✦ ' : '';
+    const animSrc = typeof getRoleAnimIcon === 'function' ? getRoleAnimIcon(r) : './assets/profile-fx/animated/star.webp';
     const pill = document.createElement('span');
-    pill.className = `profile-role-pill role-tier-${tier}`;
-    pill.style.borderColor = `${r.color || '#38bdf8'}88`;
+    pill.className = `foil-role-emblem role-tier-${tier}`;
+    pill.style.borderColor = `${r.color || '#38bdf8'}`;
     pill.innerHTML = `
-      <span class="profile-role-dot" style="background:${r.color || '#38bdf8'}"></span>
-      <span>${tierTag}${r.name}</span>
+      <img class="foil-role-anim" src="${animSrc}" alt="" />
+      <span>${r.name}</span>
       <button type="button" class="profile-role-remove" title="Remove Role">&times;</button>
     `;
     pill.querySelector('.profile-role-remove').addEventListener('click', async () => {
@@ -4744,8 +4748,9 @@ function bindEvents() {
       const profile = activeProfile();
       if (!Array.isArray(profile.roles)) profile.roles = [];
       const rName = btn.dataset.rname || 'Member';
-      const rIcon = btn.dataset.ricon || '★';
-      const fullName = `${rIcon} ${rName}`.trim();
+      const rIcon = btn.dataset.ricon || '';
+      const rImg = btn.dataset.rimg || '';
+      const fullName = rIcon ? `${rIcon} ${rName}`.trim() : rName;
       if (profile.roles.some((r) => r.name === fullName)) {
         showToast(`Role "${fullName}" already added`);
         return;
@@ -4754,7 +4759,8 @@ function bindEvents() {
         id: `role-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
         name: fullName,
         color: btn.dataset.rcolor || '#38bdf8',
-        tier: btn.dataset.rtier || 'standard'
+        tier: btn.dataset.rtier || 'standard',
+        img: rImg
       });
       await persist();
       render();
@@ -6035,19 +6041,19 @@ const DISCORD_COLOR_SWATCHES = [
 ];
 
 const DISCORD_PROFILE_EFFECTS = [
-  { id: 'none', name: 'None', emoji: '🚫', desc: 'Clean profile card without an animated overlay.', bg: '#111827' },
-  { id: 'hydro', name: 'Hydro Blast', emoji: '💧', desc: 'Glowing neon blue water splashes floating over your profile card.', bg: 'linear-gradient(135deg, #0284c7, #38bdf8)' },
-  { id: 'toxic', name: 'Toxic Mist', emoji: '💀', desc: 'Radioactive emerald glow and drifting cyber mist.', bg: 'linear-gradient(135deg, #15803d, #4ade80)' },
-  { id: 'cosmic', name: 'Cosmic Portal', emoji: '🌌', desc: 'Swirling deep-space violet nebula & magenta energy.', bg: 'linear-gradient(135deg, #581c87, #ec4899)' },
-  { id: 'sakura', name: 'Sakura Petals', emoji: '🌸', desc: 'Soft cherry blossom petals drifting across your profile.', bg: 'linear-gradient(135deg, #9d174d, #fbcfe8)' },
-  { id: 'ember', name: 'Ember Shatter', emoji: '🔥', desc: 'Glowing magma cracks & rising fiery sparks.', bg: 'linear-gradient(135deg, #7c2d12, #f97316)' },
-  { id: 'hearts', name: 'Neon Hearts', emoji: '💖', desc: 'Radiant synthwave pink & violet glow.', bg: 'linear-gradient(135deg, #86198f, #f472b6)' },
-  { id: 'aurora', name: 'Aurora Waves', emoji: '✨', desc: 'Flowing northern lights teal & indigo shimmer.', bg: 'linear-gradient(135deg, #0f766e, #6366f1)' },
-  { id: 'lightning', name: 'Electric Storm', emoji: '⚡', desc: 'High-voltage cyan & indigo lightning arcs.', bg: 'linear-gradient(135deg, #1d4ed8, #7dd3fc)' },
-  { id: 'crystal', name: 'Prismatic Crystal', emoji: '💎', desc: 'Holographic wireframe crystal & starlight sparkles.', bg: 'linear-gradient(135deg, #a16207, #ec4899)' },
-  { id: 'comet', name: 'Shooting Star', emoji: '☄️', desc: 'Streaking emerald & cyan meteor trails.', bg: 'linear-gradient(135deg, #065f46, #38bdf8)' },
-  { id: 'gold', name: 'Platinum Aura', emoji: '👑', desc: 'Golden trophy shimmer across your profile.', bg: 'linear-gradient(135deg, #854d0e, #facc15)' },
-  { id: 'matrix', name: 'Cyber Rain', emoji: '💠', desc: 'Cascading neon emerald digital glyphs.', bg: 'linear-gradient(135deg, #064e3b, #10b981)' }
+  { id: 'none', name: 'None', emoji: '🚫', anim: '', desc: 'Clean profile card without an animated overlay.', bg: '#111827' },
+  { id: 'hydro', name: 'Hydro Blast', emoji: '💧', anim: './assets/profile-fx/animated/droplet.webp', desc: '3D floating neon water orbs & splash drift.', bg: 'linear-gradient(135deg, #0284c7, #38bdf8)' },
+  { id: 'sakura', name: 'Sakura Petals', emoji: '🌸', anim: './assets/profile-fx/animated/blossom.webp', desc: '3D tumbling cherry blossom petals drifting in depth.', bg: 'linear-gradient(135deg, #9d174d, #fbcfe8)' },
+  { id: 'cosmic', name: 'Cosmic Portal', emoji: '🌌', anim: './assets/profile-fx/animated/dizzy.webp', desc: '3D spinning accretion rings & orbiting galaxy stars.', bg: 'linear-gradient(135deg, #581c87, #ec4899)' },
+  { id: 'crystal', name: 'Prismatic Crystal', emoji: '💎', anim: './assets/profile-fx/animated/gem.webp', desc: '3D rotating faceted iridescent octahedron crystals.', bg: 'linear-gradient(135deg, #a16207, #ec4899)' },
+  { id: 'ember', name: 'Ember Shatter', emoji: '🔥', anim: './assets/profile-fx/animated/fire.webp', desc: '3D rising glowing magma embers & sparks.', bg: 'linear-gradient(135deg, #7c2d12, #f97316)' },
+  { id: 'lightning', name: 'Electric Storm', emoji: '⚡', anim: './assets/profile-fx/animated/zap.webp', desc: '3D spinning neon plasma rings & lightning bolts.', bg: 'linear-gradient(135deg, #1d4ed8, #7dd3fc)' },
+  { id: 'hearts', name: 'Neon Hearts', emoji: '💖', anim: './assets/profile-fx/animated/heart.webp', desc: 'Radiant 3D synthwave pink & violet prisms.', bg: 'linear-gradient(135deg, #86198f, #f472b6)' },
+  { id: 'aurora', name: 'Aurora Waves', emoji: '✨', anim: './assets/profile-fx/animated/sparkles.webp', desc: '3D glowing teal & indigo orbital waves.', bg: 'linear-gradient(135deg, #0f766e, #6366f1)' },
+  { id: 'comet', name: 'Shooting Star', emoji: '☄️', anim: './assets/profile-fx/animated/comet.webp', desc: 'Streaking 3D emerald & cyan meteor trails.', bg: 'linear-gradient(135deg, #065f46, #38bdf8)' },
+  { id: 'gold', name: 'Platinum Aura', emoji: '👑', anim: './assets/profile-fx/animated/crown.webp', desc: 'Floating 3D golden prisms & starlight.', bg: 'linear-gradient(135deg, #854d0e, #facc15)' },
+  { id: 'toxic', name: 'Toxic Mist', emoji: '💀', anim: './assets/profile-fx/animated/star.webp', desc: 'Radioactive emerald 3D orbs & neon mist.', bg: 'linear-gradient(135deg, #15803d, #4ade80)' },
+  { id: 'matrix', name: 'Cyber Rain', emoji: '💠', anim: './assets/profile-fx/animated/trophy.webp', desc: 'Cascading neon emerald digital matrix rain.', bg: 'linear-gradient(135deg, #064e3b, #10b981)' }
 ];
 
 const DISCORD_AVATAR_DECOS = [
@@ -6065,6 +6071,19 @@ const DISCORD_AVATAR_DECOS = [
 
 let liveFxEngine = null;
 let popoverFxEngine = null;
+let passport3dStage = null;
+let passportMiniDisc = null;
+
+function getRoleAnimIcon(role) {
+  if (role?.img) return role.img;
+  const tier = role?.tier || 'standard';
+  if (tier === 'dev-viera') return './assets/profile-fx/animated/zap.webp';
+  if (tier === 'special-joshua') return './assets/profile-fx/animated/crown.webp';
+  if (tier === 'special-ruben') return './assets/profile-fx/animated/fire.webp';
+  if (tier === 'mythic') return './assets/profile-fx/animated/gem.webp';
+  if (tier === 'super') return './assets/profile-fx/animated/sparkles.webp';
+  return './assets/profile-fx/animated/star.webp';
+}
 
 function applyAvatarDecoImg(imgEl, decoId) {
   if (!imgEl) return;
@@ -6108,6 +6127,33 @@ function renderDiscordLivePreview() {
     if (!liveFxEngine) liveFxEngine = new ProfileEffectCanvas(fxLayer);
     liveFxEngine.setEffect(effectId);
   }
+  const p3dHost = document.getElementById('passport3dLayer');
+  if (p3dHost) {
+    if (!passport3dStage) passport3dStage = new Passport3DStage(p3dHost);
+    passport3dStage.setEffect(effectId);
+  }
+  const miniDiscHost = document.getElementById('passportMiniDiscHost');
+  if (miniDiscHost && !passportMiniDisc) {
+    passportMiniDisc = new PassportMiniDisc3D(miniDiscHost);
+  }
+  const stats = computeTrophyStats(profile);
+  const lvEl = document.getElementById('passportLevelText');
+  if (lvEl) lvEl.textContent = `LV ${stats.level}`;
+  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = String(val); };
+  setTxt('passportPlatCount', stats.platinum);
+  setTxt('passportGoldCount', stats.gold);
+  setTxt('passportSilverCount', stats.silver);
+  setTxt('passportBronzeCount', stats.bronze);
+
+  const fxMetaChip = DISCORD_PROFILE_EFFECTS.find((e) => e.id === effectId);
+  const fxBadge = document.getElementById('passportFxBadge');
+  const fxBadgeImg = document.getElementById('passportFxBadgeImg');
+  if (fxBadge) {
+    const showFxChip = effectId && effectId !== 'none';
+    fxBadge.classList.toggle('hidden', !showFxChip);
+    if (fxBadgeImg && fxMetaChip?.anim) fxBadgeImg.src = fxMetaChip.anim;
+  }
+
   const popFxLayer = document.getElementById('profileCardEffectLayer');
   if (popFxLayer) {
     popFxLayer.className = `discord-effect-layer ${effectId === 'none' ? 'effect-none' : 'effect-active'}`;
@@ -6157,10 +6203,11 @@ function renderDiscordLivePreview() {
     rolesEl.innerHTML = '';
     (profile.roles || []).forEach((r) => {
       const tier = r.tier || 'standard';
+      const animSrc = getRoleAnimIcon(r);
       const pill = document.createElement('span');
-      pill.className = `dc-role-pill role-tier-${tier}`;
-      pill.style.borderColor = `${r.color || accent}88`;
-      pill.innerHTML = `<span class="dc-role-dot" style="background:${r.color || accent}"></span>${r.name}`;
+      pill.className = `foil-role-emblem role-tier-${tier}`;
+      pill.style.borderColor = `${r.color || accent}`;
+      pill.innerHTML = `<img class="foil-role-anim" src="${animSrc}" alt="" /><span>${r.name}</span>`;
       rolesEl.appendChild(pill);
     });
   }
@@ -6240,7 +6287,9 @@ function initDiscordProfileStudio() {
       btn.className = `effect-tile${(activeProfile().profileEffect || 'none') === fx.id ? ' selected' : ''}`;
       btn.style.background = fx.bg;
       btn.dataset.fxId = fx.id;
-      btn.innerHTML = `<span class="effect-tile-emoji">${fx.emoji}</span><span class="effect-tile-label">${fx.name}</span>`;
+      btn.innerHTML = fx.anim
+        ? `<img class="fx-anim-thumb" src="${fx.anim}" alt="" /><span class="effect-tile-label">${fx.name}</span>`
+        : `<span class="effect-tile-emoji">${fx.emoji}</span><span class="effect-tile-label">${fx.name}</span>`;
       btn.addEventListener('click', async () => {
         activeProfile().profileEffect = fx.id;
         fxGrid.querySelectorAll('.effect-tile').forEach((el) => el.classList.toggle('selected', el.dataset.fxId === fx.id));
@@ -6864,3 +6913,63 @@ function initOrbitTheme() {
     }
   });
 }
+
+// =========================================================
+// PS3 XMB AUTO-CONTRAST DETECTOR (LIGHT BG -> BLACK TEXT)
+// =========================================================
+const xmbContrastCanvas = document.createElement('canvas');
+xmbContrastCanvas.width = 24;
+xmbContrastCanvas.height = 24;
+const xmbContrastCtx = xmbContrastCanvas.getContext('2d', { willReadFrequently: true });
+
+function sampleElementLuminance(mediaEl) {
+  try {
+    if (!mediaEl || !xmbContrastCtx) return null;
+    if (mediaEl.tagName === 'IMG' && (!mediaEl.complete || mediaEl.naturalWidth === 0)) return null;
+    if (mediaEl.tagName === 'VIDEO' && mediaEl.readyState < 2) return null;
+    xmbContrastCtx.drawImage(mediaEl, 0, 0, 24, 24);
+    const data = xmbContrastCtx.getImageData(0, 0, 24, 24).data;
+    let sum = 0;
+    const pixels = data.length / 4;
+    for (let i = 0; i < data.length; i += 4) {
+      sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    }
+    return sum / Math.max(1, pixels);
+  } catch {
+    return null;
+  }
+}
+
+function updateXmbAutoContrast() {
+  if (activeSettings().theme !== 'xmb') {
+    document.body.classList.remove('xmb-light-bg');
+    return;
+  }
+  let lum = null;
+  if (els.xmbWallpaperWrap && !els.xmbWallpaperWrap.classList.contains('hidden')) {
+    if (els.xmbWallpaperVideo && !els.xmbWallpaperVideo.classList.contains('hidden')) {
+      lum = sampleElementLuminance(els.xmbWallpaperVideo);
+    } else if (els.xmbWallpaperImg && !els.xmbWallpaperImg.classList.contains('hidden')) {
+      lum = sampleElementLuminance(els.xmbWallpaperImg);
+    }
+  } else {
+    // Check selected XMB wave color brightness
+    const preset = XMB_BG_COLORS?.[activeSettings().xmbBgColor || 'auto'];
+    if (preset?.top && preset?.bot) {
+      const r = (preset.top[0] + preset.bot[0]) * 0.5;
+      const g = (preset.top[1] + preset.bot[1]) * 0.5;
+      const b = (preset.top[2] + preset.bot[2]) * 0.5;
+      lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+  }
+  const isLight = typeof lum === 'number' && lum > 158;
+  document.body.classList.toggle('xmb-light-bg', isLight);
+}
+
+els.xmbWallpaperImg?.addEventListener('load', updateXmbAutoContrast);
+els.xmbWallpaperVideo?.addEventListener('loadeddata', updateXmbAutoContrast);
+setInterval(() => {
+  if (!document.hidden && activeSettings().theme === 'xmb') {
+    updateXmbAutoContrast();
+  }
+}, 2000);
