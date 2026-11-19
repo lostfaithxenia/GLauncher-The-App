@@ -1,6 +1,7 @@
 import { Stage3D } from './stage3d.js';
 import { BackdropRenderer, XMB_BG_COLORS } from './backdrop.js';
 import { SocialClient, normalizeHandle } from './social.js';
+import { ProfileEffectCanvas } from './profile-fx.js';
 import { XmbAudio, runPs3Intro, cancelPs3Intro, runPs3GameLaunchSplash } from './xmb-media.js';
 
 const api = window.launcherAPI;
@@ -925,14 +926,10 @@ function renderProfileCardAndHud() {
     els.profileCardPopover.style.background = `linear-gradient(165deg, ${pPrimary}ee 0%, #090c16f7 68%)`;
     els.profileCardPopover.style.borderColor = `${pAccent}66`;
   }
-  const popEffectLayer = document.getElementById('profileCardEffectLayer');
-  if (popEffectLayer) {
-    popEffectLayer.className = `discord-effect-layer effect-${profile.profileEffect || 'none'}`;
-  }
   if (els.profileCardAvatarWrap) {
     const deco = profile.avatarDecoration || 'none';
-    els.profileCardAvatarWrap.classList.remove('deco-none', 'deco-headphones', 'deco-halo', 'deco-sakura', 'deco-flame', 'deco-crown', 'deco-void', 'deco-crystal', 'deco-emerald');
-    els.profileCardAvatarWrap.classList.add(`deco-${deco}`);
+    els.profileCardAvatarWrap.classList.remove('deco-none', 'deco-headphones', 'deco-catears', 'deco-halo', 'deco-sakura', 'deco-flame', 'deco-crown', 'deco-void', 'deco-crystal', 'deco-emerald');
+    els.profileCardAvatarWrap.classList.add(`deco-${deco.startsWith('url:') ? 'none' : deco}`);
   }
   if (typeof renderDiscordLivePreview === 'function') {
     renderDiscordLivePreview();
@@ -6015,20 +6012,46 @@ const DISCORD_PROFILE_EFFECTS = [
   { id: 'lightning', name: 'Electric Storm', emoji: '⚡', desc: 'High-voltage cyan & indigo lightning arcs.', bg: 'linear-gradient(135deg, #1d4ed8, #7dd3fc)' },
   { id: 'crystal', name: 'Prismatic Crystal', emoji: '💎', desc: 'Holographic wireframe crystal & starlight sparkles.', bg: 'linear-gradient(135deg, #a16207, #ec4899)' },
   { id: 'comet', name: 'Shooting Star', emoji: '☄️', desc: 'Streaking emerald & cyan meteor trails.', bg: 'linear-gradient(135deg, #065f46, #38bdf8)' },
-  { id: 'gold', name: 'Platinum Aura', emoji: '👑', desc: 'Golden trophy shimmer across your profile.', bg: 'linear-gradient(135deg, #854d0e, #facc15)' }
+  { id: 'gold', name: 'Platinum Aura', emoji: '👑', desc: 'Golden trophy shimmer across your profile.', bg: 'linear-gradient(135deg, #854d0e, #facc15)' },
+  { id: 'matrix', name: 'Cyber Rain', emoji: '💠', desc: 'Cascading neon emerald digital glyphs.', bg: 'linear-gradient(135deg, #064e3b, #10b981)' }
 ];
 
 const DISCORD_AVATAR_DECOS = [
-  { id: 'none', name: 'None', emoji: '⭕' },
-  { id: 'headphones', name: 'Headphones', emoji: '🎧' },
-  { id: 'halo', name: 'Neon Halo', emoji: '😇' },
-  { id: 'sakura', name: 'Sakura Ring', emoji: '🌸' },
-  { id: 'flame', name: 'Flame Ring', emoji: '🔥' },
-  { id: 'crown', name: 'Royal Crown', emoji: '👑' },
-  { id: 'void', name: 'Void Pulse', emoji: '🌀' },
-  { id: 'crystal', name: 'Prism Aura', emoji: '💎' },
-  { id: 'emerald', name: 'Emerald Ring', emoji: '💚' }
+  { id: 'none', name: 'None', emoji: '⭕', svg: '' },
+  { id: 'headphones', name: 'Headphones', emoji: '🎧', svg: './assets/profile-fx/deco-headphones.svg' },
+  { id: 'catears', name: 'Cyber Ears', emoji: '🐱', svg: './assets/profile-fx/deco-catears.svg' },
+  { id: 'halo', name: 'Neon Halo', emoji: '😇', svg: './assets/profile-fx/deco-halo.svg' },
+  { id: 'sakura', name: 'Sakura Ring', emoji: '🌸', svg: './assets/profile-fx/deco-sakura.svg' },
+  { id: 'flame', name: 'Flame Ring', emoji: '🔥', svg: './assets/profile-fx/deco-flame.svg' },
+  { id: 'crown', name: 'Royal Crown', emoji: '👑', svg: './assets/profile-fx/deco-crown.svg' },
+  { id: 'void', name: 'Void Pulse', emoji: '🌀', svg: './assets/profile-fx/deco-void.svg' },
+  { id: 'crystal', name: 'Prism Aura', emoji: '💎', svg: './assets/profile-fx/deco-crystal.svg' },
+  { id: 'emerald', name: 'Emerald Ring', emoji: '💚', svg: './assets/profile-fx/deco-emerald.svg' }
 ];
+
+let liveFxEngine = null;
+let popoverFxEngine = null;
+
+function applyAvatarDecoImg(imgEl, decoId) {
+  if (!imgEl) return;
+  if (!decoId || decoId === 'none') {
+    imgEl.classList.add('hidden');
+    imgEl.removeAttribute('src');
+    return;
+  }
+  if (decoId.startsWith('url:')) {
+    imgEl.src = decoId.slice(4);
+    imgEl.classList.remove('hidden');
+    return;
+  }
+  const found = DISCORD_AVATAR_DECOS.find((d) => d.id === decoId);
+  if (found?.svg) {
+    imgEl.src = found.svg;
+    imgEl.classList.remove('hidden');
+  } else {
+    imgEl.classList.add('hidden');
+  }
+}
 
 let studioStartTs = Date.now();
 let studioElapsedTimer = null;
@@ -6046,7 +6069,19 @@ function renderDiscordLivePreview() {
   card.style.borderColor = `${accent}99`;
 
   const fxLayer = document.getElementById('discordLiveEffectLayer');
-  if (fxLayer) fxLayer.className = `discord-effect-layer effect-${effectId}`;
+  if (fxLayer) {
+    fxLayer.className = `discord-effect-layer ${effectId === 'none' ? 'effect-none' : 'effect-active'}`;
+    if (!liveFxEngine) liveFxEngine = new ProfileEffectCanvas(fxLayer);
+    liveFxEngine.setEffect(effectId);
+  }
+  const popFxLayer = document.getElementById('profileCardEffectLayer');
+  if (popFxLayer) {
+    popFxLayer.className = `discord-effect-layer ${effectId === 'none' ? 'effect-none' : 'effect-active'}`;
+    if (!popoverFxEngine) popoverFxEngine = new ProfileEffectCanvas(popFxLayer);
+    popoverFxEngine.setEffect(effectId);
+  }
+  applyAvatarDecoImg(document.getElementById('discordLiveDecoImg'), decoId);
+  applyAvatarDecoImg(document.getElementById('profileCardDecoImg'), decoId);
 
   const banner = document.getElementById('discordLiveBanner');
   if (banner) {
@@ -6171,7 +6206,7 @@ function initDiscordProfileStudio() {
     });
   }
 
-  // 3. Render Avatar Decorations Picker
+  // 3. Render Avatar Decorations Picker (with live SVG previews!)
   const decoGrid = document.getElementById('avatarDecoGrid');
   if (decoGrid) {
     decoGrid.innerHTML = '';
@@ -6180,7 +6215,9 @@ function initDiscordProfileStudio() {
       btn.type = 'button';
       btn.className = `deco-tile${(activeProfile().avatarDecoration || 'none') === dc.id ? ' selected' : ''}`;
       btn.dataset.decoId = dc.id;
-      btn.innerHTML = `<span class="deco-tile-emoji">${dc.emoji}</span><span class="deco-tile-label">${dc.name}</span>`;
+      btn.innerHTML = dc.svg
+        ? `<img class="deco-tile-preview" src="${dc.svg}" alt="" /><span class="deco-tile-label">${dc.name}</span>`
+        : `<span class="deco-tile-emoji">${dc.emoji}</span><span class="deco-tile-label">${dc.name}</span>`;
       btn.addEventListener('click', async () => {
         activeProfile().avatarDecoration = dc.id;
         decoGrid.querySelectorAll('.deco-tile').forEach((el) => el.classList.toggle('selected', el.dataset.decoId === dc.id));
@@ -6191,6 +6228,25 @@ function initDiscordProfileStudio() {
       decoGrid.appendChild(btn);
     });
   }
+
+  // Custom Animated GIF/APNG/SVG Uploads for Effects & Decorations
+  document.getElementById('btnUploadCustomEffect')?.addEventListener('click', async () => {
+    const url = await api.pickImageFile();
+    if (!url) return;
+    activeProfile().profileEffect = `url:${url}`;
+    await persist();
+    render();
+    showToast('Applied custom animated Profile Effect!');
+  });
+
+  document.getElementById('btnUploadCustomDeco')?.addEventListener('click', async () => {
+    const url = await api.pickImageFile();
+    if (!url) return;
+    activeProfile().avatarDecoration = `url:${url}`;
+    await persist();
+    render();
+    showToast('Applied custom Avatar Decoration!');
+  });
 
   // 4. Display Name & Pronouns live inputs
   const dispInput = document.getElementById('profileDisplayNameInput');

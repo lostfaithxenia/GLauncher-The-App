@@ -170,6 +170,7 @@
               <div id="profileCardAvatarWrap" class="profile-card-avatar pfp-frame-neon">
                 <img id="profileCardAvatarImg" class="pfp-img hidden" alt="" />
                 <span id="profileCardAvatarFallback" class="pfp-fallback">P</span>
+                <img id="profileCardDecoImg" class="avatar-deco-overlay hidden" alt="" />
                 <span id="profileCardStatusDot" class="live-status-dot status-online"></span>
               </div>
               <div class="profile-card-badges" id="profileCardBadges">
@@ -706,13 +707,19 @@
 
                   <!-- Add Profile Effect Visual Grid -->
                   <div class="form-field">
-                    <label>Profile Effect (Animated Card Overlay — All Unlocked)</label>
+                    <div class="group-header-row" style="margin-bottom:4px;">
+                      <label style="margin:0;">Profile Effect (60fps Animated Overlay)</label>
+                      <button type="button" id="btnUploadCustomEffect" class="btn-link">+ Upload GIF / APNG / SVG</button>
+                    </div>
                     <div id="profileEffectsGrid" class="effect-picker-grid"></div>
                   </div>
 
                   <!-- Avatar Decorations Visual Grid -->
                   <div class="form-field">
-                    <label>Avatar Decoration (Animated Ring Around PFP)</label>
+                    <div class="group-header-row" style="margin-bottom:4px;">
+                      <label style="margin:0;">Avatar Decoration (Animated SVG Frame)</label>
+                      <button type="button" id="btnUploadCustomDeco" class="btn-link">+ Upload GIF / PNG / SVG</button>
+                    </div>
                     <div id="avatarDecoGrid" class="deco-picker-grid"></div>
                   </div>
 
@@ -772,6 +779,7 @@
                     <div class="discord-live-header-row">
                       <div id="discordLiveAvatarWrap" class="discord-live-avatar-wrap deco-none">
                         <img id="discordLiveAvatarImg" class="discord-live-avatar-img" src="./assets/maxmb/icons/avatars/firmware/000.png" alt="" />
+                        <img id="discordLiveDecoImg" class="avatar-deco-overlay hidden" alt="" />
                         <span id="discordLiveStatusDot" class="live-status-dot status-online"></span>
                       </div>
                       <div id="discordLiveThoughtBubble" class="discord-thought-bubble">

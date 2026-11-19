@@ -1826,7 +1826,7 @@ ipcMain.handle('dialog:pickImage', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Select Cover / Disc Artwork',
     properties: ['openFile'],
-    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }]
+    filters: [{ name: 'Images & Animations', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp'] }]
   });
   if (result.canceled || !result.filePaths.length) return null;
 

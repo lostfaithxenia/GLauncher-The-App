@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="cy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="50%" stop-color="#f0abfc"/>
+      <stop offset="100%" stop-color="#fde047"/>
+    </linearGradient>
+  </defs>
+  <polygon points="60,6 106,33 106,87 60,114 14,87 14,33" fill="none" stroke="url(#cy)" stroke-width="3.2" opacity="0.9">
+    <animateTransform attributeName="transform" type="rotate" from="0 60 60" to="360 60 60" dur="16s" repeatCount="indefinite"/>
+  </polygon>
+  <polygon points="60,10 103,35 103,85 60,110 17,85 17,35" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.55">
+    <animateTransform attributeName="transform" type="rotate" from="360 60 60" to="0 60 60" dur="12s" repeatCount="indefinite"/>
+  </polygon>
+</svg>
