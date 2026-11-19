@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('launcherAPI', {
   pickImageFile: () => ipcRenderer.invoke('dialog:pickImage'),
   pickAvatarFile: () => ipcRenderer.invoke('dialog:pickAvatar'),
   pickVideoFile: () => ipcRenderer.invoke('dialog:pickVideo'),
+  pickBubbleMedia: () => ipcRenderer.invoke('dialog:pickBubbleMedia'),
+  applyLocalUpdateFile: (filePath) => ipcRenderer.invoke('updater:applyLocalFile', filePath),
   pickWallpaperFile: () => ipcRenderer.invoke('dialog:pickWallpaper'),
   pickAudioFile: () => ipcRenderer.invoke('dialog:pickAudio'),
 

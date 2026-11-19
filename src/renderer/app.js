@@ -260,6 +260,15 @@ const els = {
   // Display Tab
   btnQuickThemeObsidian: document.getElementById('btnQuickThemeObsidian'),
   btnQuickThemeXmb: document.getElementById('btnQuickThemeXmb'),
+  btnQuickThemeOrbit: document.getElementById('btnQuickThemeOrbit'),
+  orbitShell: document.getElementById('orbitShell'),
+  orbitCategories: document.getElementById('orbitCategories'),
+  orbitColHeading: document.getElementById('orbitColHeading'),
+  orbitDropdownList: document.getElementById('orbitDropdownList'),
+  orbitBubblesStage: document.getElementById('orbitBubblesStage'),
+  btnOrbitAddBubble: document.getElementById('btnOrbitAddBubble'),
+  btnOrbitRefresh: document.getElementById('btnOrbitRefresh'),
+  btnOrbitOptions: document.getElementById('btnOrbitOptions'),
   modeCdBtn: document.getElementById('modeCdBtn'),
   modeCaseBtn: document.getElementById('modeCaseBtn'),
   render3dBtn: document.getElementById('render3dBtn'),
@@ -1050,6 +1059,7 @@ function renderProfileCardAndHud() {
       const r = btn.dataset.rail;
       let isAct = false;
       if (r === 'xmb' && settings.theme === 'xmb') isAct = true;
+      else if (r === 'orbit' && settings.theme === 'orbit') isAct = true;
       else if (r === 'trophies' && state.drawerOpen && state.activeTab === 'trophies') isAct = true;
       else if (r === 'profile' && (!els.profileCardPopover?.classList.contains('hidden') || (state.drawerOpen && state.activeTab === 'profiles'))) isAct = true;
       else if (r === 'shelf' && settings.theme !== 'xmb' && (settings.renderMode === 'shelf3d' || settings.renderMode === '2d')) isAct = true;
@@ -1119,9 +1129,11 @@ function syncDisplayControls() {
         : '3d';
   const is3d = rm !== '2d';
   const isXmb = settings.theme === 'xmb';
+  const isOrbit = settings.theme === 'orbit';
 
-  if (els.btnQuickThemeObsidian) els.btnQuickThemeObsidian.classList.toggle('active', !isXmb);
+  if (els.btnQuickThemeObsidian) els.btnQuickThemeObsidian.classList.toggle('active', !isXmb && !isOrbit);
   if (els.btnQuickThemeXmb) els.btnQuickThemeXmb.classList.toggle('active', isXmb);
+  if (els.btnQuickThemeOrbit) els.btnQuickThemeOrbit.classList.toggle('active', isOrbit);
 
   els.modeCdBtn.classList.toggle('active', isCd);
   els.modeCaseBtn.classList.toggle('active', !isCd);
@@ -2905,16 +2917,18 @@ function render() {
   document.title = name || 'GLauncher Alpha';
 
   const isXmb = settings.theme === 'xmb';
+  const isOrbit = settings.theme === 'orbit';
   els.xmbShell.classList.toggle('hidden', !isXmb);
+  els.orbitShell?.classList.toggle('hidden', !isOrbit);
 
   const visibleGames = getFilteredSortedGames();
   const xmbNeeds3d = Boolean(stage3d?.consoleSequence) || stage3d?.subMode === 'manual' || stage3d?.subMode === 'unwrap';
 
-  if (isXmb && !xmbNeeds3d) {
+  if ((isXmb || isOrbit) && !xmbNeeds3d) {
     els.stage2dWrap.classList.add('hidden');
     els.emptyState.classList.add('hidden');
     stage3d?.stop();
-  } else if (settings.renderMode === '2d' && !isXmb && stage3d?.subMode !== 'unwrap') {
+  } else if (settings.renderMode === '2d' && !isXmb && !isOrbit && stage3d?.subMode !== 'unwrap') {
     render2dView(visibleGames);
   } else {
     render3dView(visibleGames);
@@ -2922,6 +2936,8 @@ function render() {
 
   if (isXmb) {
     renderXmb();
+  } else if (isOrbit) {
+    renderOrbit();
   }
 
   renderDock();
@@ -3855,6 +3871,14 @@ function bindEvents() {
         await persist();
         render();
         showToast(activeSettings().renderMode === 'shelf3d' ? '3D Domino / Spindle Shelf' : '2D Grid Shelf');
+      } else if (r === 'orbit') {
+        activeSettings().theme = 'orbit';
+        if (activeSettings().backdropMode === 'xmb-wave') activeSettings().backdropMode = 'starfield';
+        state.last3dKey = '';
+        closeOptionsDrawer();
+        await persist();
+        render();
+        showToast('Switched to Orbit 3D Bubbles Theme');
       } else if (r === 'xmb') {
         activeSettings().theme = 'xmb';
         activeSettings().backdropMode = 'xmb-wave';
@@ -3953,6 +3977,15 @@ function bindEvents() {
     render();
     unlockAchievement(GLOBAL_TROPHIES[0], true);
     triggerPs3Intro();
+  });
+  els.btnQuickThemeOrbit?.addEventListener('click', async () => {
+    activeSettings().theme = 'orbit';
+    if (activeSettings().backdropMode === 'xmb-wave') activeSettings().backdropMode = 'starfield';
+    state.last3dKey = '';
+    closeOptionsDrawer();
+    await persist();
+    render();
+    showToast('Switched to Orbit 3D Bubbles Theme');
   });
 
   els.btnToggleOptions.addEventListener('click', () => {
@@ -5734,6 +5767,7 @@ async function init() {
   initSpotlightSurfaces();
   initSocialAndVc();
   initDiscordProfileStudio();
+  initOrbitTheme();
   render();
 
   // App-wide non-blocking startup splash reveal
@@ -6122,8 +6156,9 @@ function renderDiscordLivePreview() {
   if (rolesEl) {
     rolesEl.innerHTML = '';
     (profile.roles || []).forEach((r) => {
+      const tier = r.tier || 'standard';
       const pill = document.createElement('span');
-      pill.className = 'dc-role-pill';
+      pill.className = `dc-role-pill role-tier-${tier}`;
       pill.style.borderColor = `${r.color || accent}88`;
       pill.innerHTML = `<span class="dc-role-dot" style="background:${r.color || accent}"></span>${r.name}`;
       rolesEl.appendChild(pill);
@@ -6341,4 +6376,480 @@ function initDiscordProfileStudio() {
   });
 
   renderDiscordLivePreview();
+}
+
+// =========================================================
+// ORBIT 3D BUBBLES THEME + DRAG & DROP LIVE UPDATES
+// =========================================================
+const ORBIT_CATEGORIES = [
+  { id: 'games', label: '🎮 Games' },
+  { id: 'friends', label: '👥 Friends & VC' },
+  { id: 'music', label: '🎵 Music' },
+  { id: 'trophies', label: '🏆 Trophies' },
+  { id: 'profile', label: '✨ Profile' },
+  { id: 'settings', label: '⚙️ Settings' }
+];
+
+const DEFAULT_ORBIT_SLOTS = [
+  { x: 10, y: 12, size: 178, delay: 0 },
+  { x: 54, y: 6, size: 146, delay: 1.4 },
+  { x: 36, y: 46, size: 205, delay: 0.7 },
+  { x: 70, y: 48, size: 158, delay: 2.1 },
+  { x: 8, y: 58, size: 138, delay: 2.8 }
+];
+
+let orbitCatIdx = 0;
+let orbitItemIdx = 0;
+
+function getOrbitItems(catId) {
+  const games = getFilteredSortedGames();
+  if (catId === 'games') {
+    const rows = games.map((g) => {
+      const tList = getGameTrophyTemplates(g);
+      const earned = getProfileAchievements().filter((a) => a.gameId === g.id).length;
+      return {
+        id: g.id,
+        title: g.title,
+        sub: `${g.platform || 'PC'} • ${g.genre || 'Game'}${tList.length ? ` • 🏆 ${earned}/${tList.length}` : ''}`,
+        thumb: g.artwork || '',
+        emoji: '💿',
+        tag: g.executable ? 'PLAY' : 'SETUP',
+        onSelect: () => {
+          state.selectedId = g.id;
+        },
+        action: () => {
+          state.selectedId = g.id;
+          if (g.executable) {
+            api.launchGame(g.executable, g.title);
+            showToast(`Launching ${g.title}…`);
+          } else {
+            openOptionsDrawer('library');
+            syncGameFormToSelected();
+          }
+        }
+      };
+    });
+    rows.push({
+      id: 'orbit-add-game',
+      title: '+ Add New Game (Roblox / Minecraft / .exe)',
+      sub: 'Add any PC executable, Roblox Player, Minecraft, or TLauncher',
+      emoji: '➕',
+      tag: 'ADD',
+      action: () => openOptionsDrawer('library')
+    });
+    return rows;
+  }
+
+  if (catId === 'friends') {
+    const friends = socialClient ? socialClient.getFriendsSnapshot() : [];
+    const rows = [
+      {
+        id: 'orbit-add-friend',
+        title: 'Open Friends & Voice Chat Studio',
+        sub: `${friends.filter((f) => f.status !== 'offline').length} online • Add friends by @handle or manage Voice Call`,
+        emoji: '🎧',
+        tag: 'OPEN',
+        action: () => openOptionsDrawer('friends')
+      }
+    ];
+    friends.forEach((f) => {
+      rows.push({
+        id: `orb-f-${f.handle}`,
+        title: `${f.name} (${f.handle})`,
+        sub: f.status === 'offline' ? 'Offline' : `${f.activity || 'Just browsing'}${f.inVc ? ' • In VC' : ''}`,
+        thumb: f.avatar || '',
+        emoji: '👤',
+        tag: f.status === 'offline' ? 'OFFLINE' : 'CALL',
+        action: () => {
+          if (f.status === 'offline') showToast(`${f.name} is offline`);
+          else {
+            socialClient?.callFriend(f.handle);
+            showToast(`Calling ${f.name}…`);
+          }
+        }
+      });
+    });
+    return rows;
+  }
+
+  if (catId === 'music') {
+    const tracks = [...(deviceMedia.audio?.ps3 || []), ...(deviceMedia.audio?.device || [])];
+    if (!tracks.length) {
+      return [
+        {
+          id: 'orbit-no-music',
+          title: 'Add Music Tracks (ps3_audio / Music Folder)',
+          sub: 'Open Media & System settings to add MP3/WAV/OGG tracks',
+          emoji: '🎵',
+          tag: 'OPEN',
+          action: () => openOptionsDrawer('launcher')
+        }
+      ];
+    }
+    return tracks.slice(0, 40).map((t, idx) => ({
+      id: `orb-track-${idx}`,
+      title: t.title || 'Track',
+      sub: [t.artist, t.album].filter(Boolean).join(' • ') || 'Audio Track',
+      emoji: '🎵',
+      tag: 'PLAY',
+      action: () => playXmbMusicTrack(tracks, idx)
+    }));
+  }
+
+  if (catId === 'trophies') {
+    const sel = games.find((g) => g.id === state.selectedId) || games[0];
+    const list = sel ? getGameTrophyTemplates(sel) : [];
+    const unlockedIds = new Set(getProfileAchievements().map((a) => a.id));
+    const rows = [
+      {
+        id: 'orbit-scan-trophies',
+        title: sel ? `↻ Detect Trophy Support for ${sel.title}` : 'Add a Game to Unlock Trophy Support',
+        sub: 'Real per-game Steam & Minecraft achievements with live popups',
+        emoji: '🏆',
+        tag: 'SCAN',
+        action: async () => {
+          if (!sel) openOptionsDrawer('library');
+          else {
+            await syncGameTrophySupport(sel, false);
+            renderOrbit();
+          }
+        }
+      }
+    ];
+    list.slice(0, 35).forEach((t) => {
+      const done = unlockedIds.has(t.id) || Boolean(t.unlocked);
+      rows.push({
+        id: `orb-tr-${t.id}`,
+        title: t.title,
+        sub: t.desc,
+        thumb: t.icon || '',
+        emoji: done ? '🏆' : '🔒',
+        tag: done ? 'EARNED' : (t.grade || 'BRONZE').toUpperCase(),
+        action: () => openOptionsDrawer('trophies')
+      });
+    });
+    return rows;
+  }
+
+  if (catId === 'profile') {
+    const p = activeProfile();
+    return [
+      {
+        id: 'orbit-edit-profile',
+        title: `${p.name} (${p.handle || '@player1'})`,
+        sub: 'Open Discord Profile Studio • Effects, Decorations, Swatches & Special Roles',
+        thumb: p.avatar || '',
+        emoji: '✨',
+        tag: 'EDIT',
+        action: () => openOptionsDrawer('profiles')
+      },
+      {
+        id: 'orbit-special-roles',
+        title: 'Special Roles (Viera DEV • Joshua • Ruben)',
+        sub: `Active: ${(p.roles || []).map((r) => r.name).join(', ') || 'None'}`,
+        emoji: '👑',
+        tag: 'ROLES',
+        action: () => openOptionsDrawer('profiles')
+      }
+    ];
+  }
+
+  // settings
+  return [
+    {
+      id: 'orbit-add-bubble',
+      title: '+ Add 3D Media Bubble (Photo / GIF / Video)',
+      sub: 'Drop any picture, GIF, or looping video into a floating 3D glass sphere',
+      emoji: '🫧',
+      tag: 'ADD',
+      action: () => addOrbitBubbleInteractive()
+    },
+    {
+      id: 'orbit-clear-bubbles',
+      title: 'Clear All 3D Media Bubbles',
+      sub: 'Reset all custom bubbles back to empty glass spheres',
+      emoji: '🧹',
+      tag: 'RESET',
+      action: async () => {
+        activeSettings().orbitBubbles = [];
+        await persist();
+        renderOrbitBubbles();
+        showToast('Cleared Orbit 3D bubbles');
+      }
+    },
+    {
+      id: 'orbit-to-obsidian',
+      title: 'Switch Theme → Obsidian Glass (3D Disc & Case)',
+      sub: 'Your choice is saved for next launch',
+      emoji: '💿',
+      tag: 'THEME',
+      action: async () => {
+        activeSettings().theme = 'obsidian';
+        await persist();
+        render();
+      }
+    },
+    {
+      id: 'orbit-to-xmb',
+      title: 'Switch Theme → PS3 XMB (Firmware 4.93)',
+      sub: 'Your choice is saved for next launch',
+      emoji: '🎮',
+      tag: 'THEME',
+      action: async () => {
+        activeSettings().theme = 'xmb';
+        activeSettings().backdropMode = 'xmb-wave';
+        await persist();
+        render();
+        triggerPs3Intro();
+      }
+    },
+    {
+      id: 'orbit-updates',
+      title: 'Check for Live Updates',
+      sub: 'Or drag & drop an update .zip / app.asar / .exe right onto GLauncher!',
+      emoji: '⚡',
+      tag: 'UPDATE',
+      action: () => openOptionsDrawer('launcher')
+    }
+  ];
+}
+
+async function addOrbitBubbleInteractive(replaceId = null) {
+  const picked = await api.pickBubbleMedia?.();
+  if (!picked?.url) return;
+  const settings = activeSettings();
+  if (!Array.isArray(settings.orbitBubbles)) settings.orbitBubbles = [];
+
+  if (replaceId) {
+    const existing = settings.orbitBubbles.find((b) => b.id === replaceId);
+    if (existing) {
+      existing.url = picked.url;
+      existing.kind = picked.kind;
+    }
+  } else {
+    const slot = DEFAULT_ORBIT_SLOTS[settings.orbitBubbles.length % DEFAULT_ORBIT_SLOTS.length];
+    settings.orbitBubbles.push({
+      id: `bubble-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      url: picked.url,
+      kind: picked.kind,
+      x: Math.min(76, Math.max(4, slot.x + (Math.random() - 0.5) * 10)),
+      y: Math.min(68, Math.max(4, slot.y + (Math.random() - 0.5) * 8)),
+      size: slot.size
+    });
+  }
+  await persist();
+  renderOrbitBubbles();
+  showToast(picked.kind === 'video' ? '3D Video Bubble added!' : '3D Photo Bubble added!');
+}
+
+function renderOrbitBubbles() {
+  const stage = els.orbitBubblesStage;
+  if (!stage) return;
+  stage.innerHTML = '';
+
+  const bubbles = Array.isArray(activeSettings().orbitBubbles) ? activeSettings().orbitBubbles : [];
+  const totalSlots = Math.max(DEFAULT_ORBIT_SLOTS.length, bubbles.length);
+
+  for (let i = 0; i < totalSlots; i++) {
+    const data = bubbles[i] || null;
+    const slot = DEFAULT_ORBIT_SLOTS[i % DEFAULT_ORBIT_SLOTS.length];
+    const x = data?.x ?? slot.x;
+    const y = data?.y ?? slot.y;
+    const size = data?.size ?? slot.size;
+
+    const el = document.createElement('div');
+    el.className = 'orbit-bubble-3d';
+    el.style.left = `${x}%`;
+    el.style.top = `${y}%`;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.animationDelay = `${(i * 0.85) % 4}s`;
+
+    if (data?.url) {
+      if (data.kind === 'video') {
+        const vid = document.createElement('video');
+        vid.className = 'orbit-bubble-media';
+        vid.src = data.url;
+        vid.autoplay = true;
+        vid.loop = true;
+        vid.muted = true;
+        vid.playsInline = true;
+        el.appendChild(vid);
+      } else {
+        const img = document.createElement('img');
+        img.className = 'orbit-bubble-media';
+        img.src = data.url;
+        img.alt = '';
+        el.appendChild(img);
+      }
+
+      const btnRem = document.createElement('button');
+      btnRem.type = 'button';
+      btnRem.className = 'orbit-bubble-remove';
+      btnRem.textContent = '×';
+      btnRem.title = 'Remove bubble';
+      btnRem.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        activeSettings().orbitBubbles = (activeSettings().orbitBubbles || []).filter((b) => b.id !== data.id);
+        await persist();
+        renderOrbitBubbles();
+      });
+      el.appendChild(btnRem);
+      el.title = 'Click to replace photo/video in this 3D bubble';
+      el.addEventListener('click', () => addOrbitBubbleInteractive(data.id));
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'orbit-bubble-placeholder';
+      ph.innerHTML = `<span style="font-size:24px;">🫧</span><span>Click to put Photo / GIF / Video</span>`;
+      el.appendChild(ph);
+      el.addEventListener('click', () => addOrbitBubbleInteractive());
+    }
+
+    const gloss = document.createElement('div');
+    gloss.className = 'orbit-bubble-gloss';
+    el.appendChild(gloss);
+
+    stage.appendChild(el);
+  }
+}
+
+function renderOrbit() {
+  if (!els.orbitShell || activeSettings().theme !== 'orbit') return;
+
+  if (els.orbitCategories) {
+    els.orbitCategories.innerHTML = '';
+    ORBIT_CATEGORIES.forEach((c, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `orbit-cat-btn${idx === orbitCatIdx ? ' active' : ''}`;
+      btn.textContent = c.label;
+      btn.addEventListener('click', () => {
+        orbitCatIdx = idx;
+        orbitItemIdx = 0;
+        renderOrbit();
+      });
+      els.orbitCategories.appendChild(btn);
+    });
+  }
+
+  const cat = ORBIT_CATEGORIES[orbitCatIdx] || ORBIT_CATEGORIES[0];
+  if (els.orbitColHeading) els.orbitColHeading.textContent = cat.label.toUpperCase();
+
+  const items = getOrbitItems(cat.id);
+  if (orbitItemIdx >= items.length) orbitItemIdx = Math.max(0, items.length - 1);
+
+  if (els.orbitDropdownList) {
+    els.orbitDropdownList.innerHTML = '';
+    items.forEach((item, idx) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = `orbit-item${idx === orbitItemIdx ? ' active' : ''}`;
+      const thumbHtml = item.thumb
+        ? `<img class="orbit-item-thumb" src="${item.thumb}" alt="" />`
+        : `<div class="orbit-item-thumb">${item.emoji || '💿'}</div>`;
+      row.innerHTML = `
+        ${thumbHtml}
+        <div class="orbit-item-meta">
+          <div class="orbit-item-title">${item.title}</div>
+          <div class="orbit-item-sub">${item.sub || ''}</div>
+        </div>
+        ${item.tag ? `<span class="orbit-item-tag">${item.tag}</span>` : ''}
+      `;
+      row.addEventListener('mouseenter', () => {
+        orbitItemIdx = idx;
+        item.onSelect?.();
+        els.orbitDropdownList.querySelectorAll('.orbit-item').forEach((el, j) => el.classList.toggle('active', j === idx));
+      });
+      row.addEventListener('click', () => {
+        orbitItemIdx = idx;
+        item.action?.();
+      });
+      els.orbitDropdownList.appendChild(row);
+    });
+  }
+
+  renderOrbitBubbles();
+}
+
+function initOrbitTheme() {
+  els.btnOrbitAddBubble?.addEventListener('click', () => addOrbitBubbleInteractive());
+  els.btnOrbitRefresh?.addEventListener('click', () => {
+    renderOrbit();
+    showToast('Refreshed Orbit 3D Theme');
+  });
+  els.btnOrbitOptions?.addEventListener('click', () => openOptionsDrawer('display'));
+
+  // Keyboard navigation in Orbit theme (like PS3 dropdown!)
+  window.addEventListener('keydown', (e) => {
+    if (activeSettings().theme !== 'orbit' || state.drawerOpen) return;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+    const cat = ORBIT_CATEGORIES[orbitCatIdx] || ORBIT_CATEGORIES[0];
+    const items = getOrbitItems(cat.id);
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      orbitCatIdx = (orbitCatIdx + 1) % ORBIT_CATEGORIES.length;
+      orbitItemIdx = 0;
+      renderOrbit();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      orbitCatIdx = (orbitCatIdx - 1 + ORBIT_CATEGORIES.length) % ORBIT_CATEGORIES.length;
+      orbitItemIdx = 0;
+      renderOrbit();
+    } else if (e.key === 'ArrowDown' && items.length) {
+      e.preventDefault();
+      orbitItemIdx = (orbitItemIdx + 1) % items.length;
+      items[orbitItemIdx]?.onSelect?.();
+      renderOrbit();
+    } else if (e.key === 'ArrowUp' && items.length) {
+      e.preventDefault();
+      orbitItemIdx = (orbitItemIdx - 1 + items.length) % items.length;
+      items[orbitItemIdx]?.onSelect?.();
+      renderOrbit();
+    } else if (e.key === 'Enter' && items[orbitItemIdx]) {
+      e.preventDefault();
+      items[orbitItemIdx].action?.();
+    }
+  });
+
+  // Drag & Drop support:
+  // 1) Dropping an update file (app.asar / GLauncher*.zip / GLauncher*.exe) applies a live update!
+  // 2) Dropping a photo/GIF/video onto Orbit adds a new 3D Media Bubble!
+  window.addEventListener('drop', async (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    const fp = api.getFilePath?.(file);
+    if (!fp) return;
+    const lower = fp.toLowerCase();
+
+    if (lower.endsWith('app.asar') || /glauncher.*\.(zip|exe)$/i.test(lower)) {
+      e.preventDefault();
+      showToast('Applying drag & drop GLauncher update…');
+      const res = await api.applyLocalUpdateFile?.(fp);
+      if (!res?.ok) showToast(`Update failed: ${res?.error || 'Error'}`);
+      return;
+    }
+
+    if (activeSettings().theme === 'orbit' && /\.(png|jpe?g|webp|gif|mp4|webm|mkv)$/i.test(lower)) {
+      e.preventDefault();
+      const isVid = /\.(mp4|webm|mkv)$/i.test(lower);
+      const url = isVid ? `file:///${fp.replace(/\\/g, '/')}` : (await api.importArtworkFile(fp));
+      if (url) {
+        const settings = activeSettings();
+        if (!Array.isArray(settings.orbitBubbles)) settings.orbitBubbles = [];
+        const slot = DEFAULT_ORBIT_SLOTS[settings.orbitBubbles.length % DEFAULT_ORBIT_SLOTS.length];
+        settings.orbitBubbles.push({
+          id: `bubble-${Date.now()}`,
+          url,
+          kind: isVid ? 'video' : 'image',
+          x: slot.x,
+          y: slot.y,
+          size: slot.size
+        });
+        await persist();
+        renderOrbitBubbles();
+        showToast(isVid ? 'Dropped 3D Video Bubble!' : 'Dropped 3D Photo Bubble!');
+      }
+    }
+  });
 }

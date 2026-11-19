@@ -1,6 +1,6 @@
 {
   "name": "glauncher",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "updateFeedUrl": "https://raw.githubusercontent.com/lostfaithxenia/GLauncher-Alpha/main/update-manifest.json",
   "description": "GLauncher Alpha — A tactile physical-media Windows game launcher featuring switchable Game CD and Game Case interfaces.",
   "main": "src/main.js",
@@ -43,14 +43,14 @@
       "signExecutable": false
     },
     "nsis": {
-      "artifactName": "GLauncher-Alpha-Setup.exe",
+      "artifactName": "GLauncher-Setup-0.3.0.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
     "portable": {
-      "artifactName": "GLauncher-Alpha-Portable.exe"
+      "artifactName": "GLauncher-Portable-0.3.0.exe"
     }
   }
 }

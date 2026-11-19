@@ -40,7 +40,8 @@ const DEFAULT_SETTINGS = {
   spinOnHover: true,
   showTitlesOnMedia: true,
   graphicsQuality: 'high', // 'high' | 'balanced' | 'performance'
-  theme: 'obsidian', // 'obsidian' | 'cyber' | 'walnut' | 'arctic' | 'xmb'
+  theme: 'obsidian', // 'obsidian' | 'cyber' | 'walnut' | 'arctic' | 'xmb' | 'orbit'
+  orbitBubbles: [], // [{ id, url, kind: 'image'|'video', x, y, size }]
   backdropMode: 'aurora', // 'aurora' | 'starfield' | 'cybergrid' | 'xmb-wave' | 'clean'
   glassStyle: 'liquid', // 'liquid' | 'carbon' | 'matte'
   pfpFrame: 'neon', // 'neon' | 'prismatic' | 'void' | 'holo' | 'gold' | 'minimal'
@@ -144,6 +145,11 @@ function sanitizeStore(parsed) {
         const mergedSettings = { ...DEFAULT_SETTINGS, ...(p.settings || {}) };
         if (mergedSettings.xmbWallpaper && !fileUrlExists(mergedSettings.xmbWallpaper)) {
           mergedSettings.xmbWallpaper = '';
+        }
+        if (Array.isArray(mergedSettings.orbitBubbles)) {
+          mergedSettings.orbitBubbles = mergedSettings.orbitBubbles.filter((b) => b && b.url && fileUrlExists(b.url)).slice(0, 14);
+        } else {
+          mergedSettings.orbitBubbles = [];
         }
         if (needsV2Upgrade) {
           mergedSettings.renderMode = '3d';
@@ -1853,6 +1859,70 @@ ipcMain.handle('dialog:pickAvatar', async () => {
   const destPath = path.join(AVATARS_DIR, `${crypto.randomUUID()}${ext}`);
   fs.copyFileSync(srcPath, destPath);
   return `file:///${destPath.replace(/\\/g, '/')}`;
+});
+
+ipcMain.handle('dialog:pickBubbleMedia', async () => {
+  if (!mainWindow) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Picture, GIF, or Video for 3D Orbit Bubble',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Images, GIFs & Videos', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'mp4', 'webm', 'mkv'] }
+    ]
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  ensureDirs();
+  const srcPath = result.filePaths[0];
+  const ext = path.extname(srcPath).toLowerCase() || '.png';
+  const isVideo = ['.mp4', '.webm', '.mkv'].includes(ext);
+  const destDir = isVideo ? PS3_VIDEO_DIR : PS3_PIC_DIR;
+  const destPath = path.join(destDir, `orbit-bubble-${crypto.randomUUID()}${ext}`);
+  fs.copyFileSync(srcPath, destPath);
+  return {
+    url: `file:///${destPath.replace(/\\/g, '/')}`,
+    kind: isVideo ? 'video' : 'image'
+  };
+});
+
+ipcMain.handle('updater:applyLocalFile', async (_event, localFilePath) => {
+  if (!localFilePath || typeof localFilePath !== 'string' || !fs.existsSync(localFilePath)) {
+    return { ok: false, error: 'FILE_NOT_FOUND' };
+  }
+  const base = path.basename(localFilePath).toLowerCase();
+  if (base === 'app.asar') {
+    if (!app.isPackaged) {
+      return { ok: false, error: 'DEV_MODE_SKIP' };
+    }
+    const resDir = process.resourcesPath;
+    const targetAsar = path.join(resDir, 'app.asar');
+    const tempScript = path.join(os.tmpdir(), 'glauncher-asar-update.ps1');
+    const escSrc = localFilePath.replace(/'/g, "''");
+    const escDst = targetAsar.replace(/'/g, "''");
+    const escExe = process.execPath.replace(/'/g, "''");
+    const ps = [
+      `$pidToWait = ${process.pid}`,
+      `while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 200 }`,
+      `Start-Sleep -Milliseconds 300`,
+      `Copy-Item -Path '${escSrc}' -Destination '${escDst}' -Force`,
+      `Start-Process -FilePath '${escExe}'`
+    ].join('\r\n');
+    fs.writeFileSync(tempScript, ps, 'utf8');
+    const child = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', tempScript], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    });
+    child.unref();
+    setTimeout(() => app.exit(0), 250);
+    return { ok: true };
+  }
+  return installRemoteUpdate({
+    version: '0.3.0',
+    title: 'GLauncher Local Drag & Drop Update',
+    downloadUrl: localFilePath,
+    notes: ['Applied via drag & drop update package!'],
+    fixes: []
+  });
 });
 
 ipcMain.handle('dialog:pickVideo', async () => {

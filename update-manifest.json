@@ -1,17 +1,16 @@
 {
-  "version": "0.2.0",
-  "title": "GLauncher v0.2.0 — Social, Voice Chat & Obsidian Overhaul",
-  "downloadUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.2.0/GLauncher-Setup-0.2.0.exe",
+  "version": "0.3.0",
+  "title": "GLauncher v0.3.0 — Orbit 3D Theme, Special Roles & Animated Profile Studio",
+  "downloadUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.3.0/GLauncher-Setup-0.3.0.exe",
   "notes": [
-    "Discord-style Profile & Super Role customization (display name, @handle, custom banner upload, theme colors, role icons & presets)",
-    "Online Friends & Rich Presence in both Obsidian and PS3 XMB ('Playing <Game>' or 'Just browsing')",
-    "WebRTC Voice Chat with translucent in-game overlay & green speaking rings",
-    "Revamped Music Player on both themes (seek bar, shuffle, repeat, volume)",
-    "Minecraft Launcher, Minecraft & TLauncher auto-detection support",
-    "App-wide startup animation & persistent theme selection across boots"
+    "NEW Theme: Orbit 3D Bubbles — PS3-style vertical dropdown list + floating 3D translucent glass bubbles that hold your Pictures, GIFs & Videos!",
+    "Exclusive Special Roles: ⚡ Viera • DEV, 👑✦ Joshua (Super Special), and 🔥✦ Ruben (Super Special)",
+    "12 real 60fps Canvas animated Profile Effects + 9 animated SVG Avatar Decorations + custom GIF/APNG/SVG uploads",
+    "Real game-exclusive trophy detection (Steam & Minecraft Advancements) with live in-game trophy popups",
+    "Drag & Drop Live Updates: drag app.asar or any GLauncher update file directly onto GLauncher to update without losing customization"
   ],
   "fixes": [
-    "Fixed Obsidian white background & native dropdown/scrollbar flash (color-scheme: dark + WebGL context recovery)",
-    "Optimized 3D stage & backdrop GPU compositing"
+    "Fixed deleted wallpaper/avatar/cover file:/// paths so backgrounds & icons never break",
+    "Fixed Obsidian white backgrounds and persisted chosen theme across restarts"
   ]
 }

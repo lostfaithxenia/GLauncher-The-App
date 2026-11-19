@@ -102,6 +102,12 @@
             </svg>
             <span class="rail-tooltip">PS3 XMB Mode</span>
           </button>
+          <button class="rail-btn" data-rail="orbit" title="Switch to Orbit 3D Bubbles Theme">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-24 12 12)"/>
+            </svg>
+            <span class="rail-tooltip">Orbit 3D Bubbles</span>
+          </button>
           <div class="rail-divider"></div>
           <button class="rail-btn" data-rail="trophies" title="Trophies &amp; Achievements">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -382,6 +388,37 @@
           </div>
         </section>
 
+        <!-- ORBIT 3D BUBBLES THEME (PS3-Style Dropdown + Floating 3D Video/Photo Glass Spheres) -->
+        <section id="orbitShell" class="orbit-shell hidden" aria-label="Orbit 3D Theme">
+          <div class="orbit-ambient-ring" aria-hidden="true"></div>
+          <div class="orbit-topbar">
+            <div id="orbitCategories" class="orbit-cat-pills" role="tablist"></div>
+            <div class="orbit-top-actions">
+              <button type="button" id="btnOrbitAddBubble" class="btn-primary btn-xs">+ Add 3D Bubble (Photo/Video)</button>
+              <button type="button" id="btnOrbitRefresh" class="btn-secondary btn-xs" title="Refresh Orbit Theme (F5)">&#x21bb;</button>
+              <button type="button" id="btnOrbitOptions" class="btn-secondary btn-xs">Studio &amp; Themes</button>
+            </div>
+          </div>
+
+          <div class="orbit-workspace">
+            <!-- Left: PS3-Style Smooth Vertical Dropdown List -->
+            <div class="orbit-dropdown-col">
+              <div id="orbitColHeading" class="orbit-col-heading">GAMES</div>
+              <div id="orbitDropdownList" class="orbit-dropdown-list" role="listbox"></div>
+            </div>
+
+            <!-- Right: Floating 3D Translucent Glass Media Bubbles -->
+            <div id="orbitBubblesStage" class="orbit-bubbles-stage" aria-label="3D Floating Media Bubbles"></div>
+          </div>
+
+          <div class="orbit-footer-hints">
+            <span>↑↓ Browse</span>
+            <span>←→ Category</span>
+            <span>Enter Launch / Open</span>
+            <span>Click or Drop Photo/GIF/Video into 3D Bubbles</span>
+          </div>
+        </section>
+
         <!-- 2D Shelf Stage -->
         <main id="stage2dWrap" class="stage-wrap hidden">
           <div id="mediaGrid" class="media-grid size-md mode-cd" tabindex="0"></div>
@@ -427,6 +464,7 @@
               <div class="seg-row">
                 <button id="btnQuickThemeObsidian" class="seg-btn active">Obsidian Glass</button>
                 <button id="btnQuickThemeXmb" class="seg-btn">PS3 XMB (4.93)</button>
+                <button id="btnQuickThemeOrbit" class="seg-btn">Orbit 3D Bubbles</button>
               </div>
             </div>
 
@@ -751,17 +789,22 @@
                     <div class="role-creator-row" style="margin-top:6px;">
                       <input id="newRoleIconInput" type="text" class="text-input" maxlength="4" placeholder="⚡" style="max-width:54px; text-align:center;" />
                       <input id="newRoleNameInput" type="text" class="text-input" maxlength="22" placeholder="Role name (e.g. Speedrunner)" />
-                      <select id="newRoleTierSelect" class="select-input" style="max-width:140px;">
+                      <select id="newRoleTierSelect" class="select-input" style="max-width:165px;">
                         <option value="standard">Standard Role</option>
                         <option value="super">✦ Super Role</option>
                         <option value="mythic">🔥 Mythic Role</option>
+                        <option value="dev-viera">⚡ Viera DEV Tier</option>
+                        <option value="special-joshua">👑 Joshua Super Special</option>
+                        <option value="special-ruben">🔥 Ruben Super Special</option>
                       </select>
                       <input id="newRoleColorInput" type="color" value="#38bdf8" class="color-picker color-picker-inline" />
                       <button type="button" id="btnAddProfileRole" class="btn-primary btn-sm">+ Add</button>
                     </div>
-                    <div class="quick-exe-row" style="margin-top:6px;">
-                      <button type="button" class="btn-link quick-role-preset" data-rname="Founder" data-ricon="👑" data-rcolor="#facc15" data-rtier="mythic">+ 👑 Founder</button>
-                      <button type="button" class="btn-link quick-role-preset" data-rname="Developer" data-ricon="⚡" data-rcolor="#38bdf8" data-rtier="super">+ ⚡ Developer</button>
+                    <div class="quick-exe-row" style="margin-top:6px; flex-wrap:wrap;">
+                      <button type="button" class="btn-link quick-role-preset" data-rname="Viera • DEV" data-ricon="⚡" data-rcolor="#22d3ee" data-rtier="dev-viera">+ ⚡ Viera (DEV)</button>
+                      <button type="button" class="btn-link quick-role-preset" data-rname="Joshua" data-ricon="👑✦" data-rcolor="#facc15" data-rtier="special-joshua">+ 👑✦ Joshua (Special)</button>
+                      <button type="button" class="btn-link quick-role-preset" data-rname="Ruben" data-ricon="🔥✦" data-rcolor="#f43f5e" data-rtier="special-ruben">+ 🔥✦ Ruben (Special)</button>
+                      <button type="button" class="btn-link quick-role-preset" data-rname="Founder" data-ricon="★" data-rcolor="#facc15" data-rtier="mythic">+ ★ Founder</button>
                       <button type="button" class="btn-link quick-role-preset" data-rname="Streamer" data-ricon="🎙️" data-rcolor="#a855f7" data-rtier="super">+ 🎙️ Streamer</button>
                       <button type="button" class="btn-link quick-role-preset" data-rname="VIP" data-ricon="💎" data-rcolor="#ec4899" data-rtier="mythic">+ 💎 VIP</button>
                     </div>
@@ -954,6 +997,7 @@
                   <label for="settingTheme">Active Theme</label>
                   <select id="settingTheme" class="select-input">
                     <option value="obsidian">Obsidian Glass (Default Main Theme)</option>
+                    <option value="orbit">Orbit 3D Bubbles (Dropdown + Video/Photo Spheres)</option>
                     <option value="xmb">PS3 XMB (Firmware 4.93 + MaXMB)</option>
                     <option value="cyber">Neon Cyber</option>
                     <option value="walnut">Warm Studio</option>
