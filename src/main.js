@@ -12,6 +12,7 @@ const USER_DATA_DIR = app.getPath('userData');
 const LEGACY_LIBRARY_PATH = path.join(USER_DATA_DIR, 'library.json');
 const PROFILES_PATH = path.join(USER_DATA_DIR, 'profiles.json');
 const MANUALS_DIR = path.join(USER_DATA_DIR, 'manuals');
+const ASSET_CACHE_DIR = path.join(USER_DATA_DIR, 'asset-cache');
 
 function resolveLauncherMainDir() {
   const base = app.isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
@@ -42,6 +43,10 @@ const DEFAULT_SETTINGS = {
   graphicsQuality: 'high', // 'high' | 'balanced' | 'performance'
   theme: 'obsidian', // 'obsidian' | 'cyber' | 'walnut' | 'arctic' | 'xmb' | 'orbit'
   orbitBubbles: [], // [{ id, url, kind: 'image'|'video', x, y, size }]
+  orbitBubbleStyle: 'crystal', // 'crystal' | 'neon' | 'prism' | 'soap'
+  orbitAudioReactive: true,
+  obsidianSounds: true,
+  launchCinematic: 'cartoon', // 'cartoon' | 'disc' | 'ps3' | 'instant'
   backdropMode: 'aurora', // 'aurora' | 'starfield' | 'cybergrid' | 'xmb-wave' | 'clean'
   glassStyle: 'liquid', // 'liquid' | 'carbon' | 'matte'
   pfpFrame: 'neon', // 'neon' | 'prismatic' | 'void' | 'holo' | 'gold' | 'minimal'
@@ -76,6 +81,7 @@ function createDefaultStore(legacyData = null) {
   return {
     schemaVersion: 8,
     tutorialCompleted: false,
+    unlockedRoles: [],
     activeProfileId: 'profile-default',
     profiles: [
       {
@@ -90,6 +96,7 @@ function createDefaultStore(legacyData = null) {
         bio: 'Collector of physical discs, PS3 XMB enthusiast & achievement hunter.',
         vfx: 'prismatic', // 'prismatic' | 'neon' | 'void' | 'holo' | 'gold' | 'none'
         roles: [...DEFAULT_ROLES],
+        unlockedRoles: [],
         psnCardColor: '#1d4ed8',
         psnComment: 'Welcome to my PS3 XMB Profile!',
         psPlus: true,
@@ -110,7 +117,7 @@ let lastOverlayTrigger = 0;
 let runningGame = null; // { title, target, pid, exeName, startedAt }
 
 function ensureDirs() {
-  for (const dir of [USER_DATA_DIR, MANUALS_DIR, PS3_PIC_DIR, PS3_VIDEO_DIR, PS3_AUDIO_DIR]) {
+  for (const dir of [USER_DATA_DIR, MANUALS_DIR, ASSET_CACHE_DIR, PS3_PIC_DIR, PS3_VIDEO_DIR, PS3_AUDIO_DIR]) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -161,7 +168,10 @@ function sanitizeStore(parsed) {
           artwork: fileUrlExists(g.artwork) ? g.artwork : '',
           backArtwork: fileUrlExists(g.backArtwork) ? g.backArtwork : ''
         }));
-        const cleanRoles = Array.isArray(p.roles) && p.roles.length > 0 ? p.roles : [...DEFAULT_ROLES];
+        const cleanRoles = Array.isArray(p.roles) ? p.roles : [...DEFAULT_ROLES];
+        const profileUnlockedRoles = Array.isArray(p.unlockedRoles)
+          ? [...new Set(p.unlockedRoles.map((k) => String(k).toLowerCase()))]
+          : [];
         const safeAvatar = fileUrlExists(p.avatar) ? String(p.avatar) : './assets/maxmb/icons/avatars/firmware/000.png';
         const rawBanner = String(p.banner || '');
         const bannerUrlMatch = rawBanner.match(/url\(["']?(file:\/\/\/[^"')]+)["']?\)/i);
@@ -180,6 +190,7 @@ function sanitizeStore(parsed) {
           profileAccentColor: String(p.profileAccentColor || p.color || '#38bdf8'),
           profileEffect: String(p.profileEffect || 'none'),
           avatarDecoration: String(p.avatarDecoration || 'none'),
+          avatarDecorationRemote: String(p.avatarDecorationRemote || ''),
           colorSwatch: String(p.colorSwatch || 'obsidian'),
           badges: Array.isArray(p.badges) ? p.badges.slice(0, 12) : ['alpha-pioneer'],
           friends: Array.isArray(p.friends)
@@ -197,6 +208,7 @@ function sanitizeStore(parsed) {
           bio: String(p.bio ?? 'Collector of physical discs, PS3 XMB enthusiast & achievement hunter.').slice(0, 240),
           vfx: String(p.vfx === 'nitro' ? 'prismatic' : (p.vfx || 'prismatic')),
           roles: cleanRoles,
+          unlockedRoles: profileUnlockedRoles,
           psnCardColor: String(p.psnCardColor || '#1d4ed8'),
           psnComment: String(p.psnComment ?? 'Welcome to my PS3 XMB Profile!').slice(0, 90),
           psPlus: p.psPlus !== undefined ? Boolean(p.psPlus) : true,
@@ -210,9 +222,16 @@ function sanitizeStore(parsed) {
     : createDefaultStore().profiles;
 
   const hasActive = profiles.some((p) => p.id === parsed?.activeProfileId);
+  const storeUnlockedRoles = [
+    ...new Set([
+      ...(Array.isArray(parsed?.unlockedRoles) ? parsed.unlockedRoles.map((k) => String(k).toLowerCase()) : []),
+      ...profiles.flatMap((p) => (Array.isArray(p.unlockedRoles) ? p.unlockedRoles : []))
+    ])
+  ];
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     tutorialCompleted: Boolean(parsed?.tutorialCompleted),
+    unlockedRoles: storeUnlockedRoles,
     activeProfileId: hasActive ? parsed.activeProfileId : profiles[0].id,
     profiles
   };
@@ -869,6 +888,23 @@ function resumeLauncherFromGame() {
   }, 140);
 }
 
+function emitPlaytimeAndClearRunningGame() {
+  if (!runningGame) return;
+  const ended = runningGame;
+  runningGame = null;
+  const elapsedSeconds = Math.max(1, Math.round((Date.now() - (ended.startedAt || Date.now())) / 1000));
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      mainWindow.webContents.send('game:playtimeRecorded', {
+        title: ended.title,
+        target: ended.target,
+        elapsedSeconds
+      });
+    } catch {}
+  }
+  sendOverlayState();
+}
+
 function startProcessWatch(exeName) {
   if (gameWatchTimer) clearInterval(gameWatchTimer);
   if (!exeName) return;
@@ -882,8 +918,7 @@ function startProcessWatch(exeName) {
       if (!runningGame) return;
       const out = String(stdout || '').toLowerCase();
       if (!out.includes(exeName.toLowerCase())) {
-        runningGame = null;
-        sendOverlayState();
+        emitPlaytimeAndClearRunningGame();
         resumeLauncherFromGame();
       }
     });
@@ -1416,8 +1451,7 @@ async function launchTarget(target, title = '') {
       };
       child.on('exit', () => {
         if (runningGame?.pid === child.pid && !isRobloxLauncher) {
-          runningGame = null;
-          sendOverlayState();
+          emitPlaytimeAndClearRunningGame();
           resumeLauncherFromGame();
         }
       });
@@ -1457,8 +1491,7 @@ function killRunningGame() {
       return;
     }
     const { pid, exeName } = runningGame;
-    runningGame = null;
-    sendOverlayState();
+    emitPlaytimeAndClearRunningGame();
 
     if (pid) {
       execFile('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true }, () => {
@@ -1619,16 +1652,12 @@ function downloadUpdateFile(urlStr, destPath, onProgress, redirects = 0) {
 
 async function installRemoteUpdate(manifest) {
   const target = manifest || cachedPendingManifest;
-  if (!target?.downloadUrl) return { ok: false, error: 'NO_MANIFEST' };
+  if (!target?.downloadUrl && !target?.asarUrl) return { ok: false, error: 'NO_MANIFEST' };
 
   const tempDir = path.join(os.tmpdir(), 'GameLauncherUpdate');
   const stageDir = path.join(tempDir, 'stage');
   fs.rmSync(tempDir, { recursive: true, force: true });
   fs.mkdirSync(stageDir, { recursive: true });
-
-  const isZip = /\.zip(\?|$)/i.test(target.downloadUrl);
-  const pkgName = isZip ? 'update.zip' : 'update.exe';
-  const downloadedPath = path.join(tempDir, pkgName);
 
   const sendProgress = (pct, status) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1636,11 +1665,39 @@ async function installRemoteUpdate(manifest) {
     }
   };
 
+  // Fast 1-click Live Patch path: download app.asar directly when packaged & asarUrl is available!
+  let useAsarFastPatch = Boolean(app.isPackaged && target.asarUrl);
+  let activeUrl = useAsarFastPatch ? target.asarUrl : target.downloadUrl;
+  let isAsar = useAsarFastPatch || /\.asar(\?|$)/i.test(activeUrl || '');
+  let isZip = !isAsar && /\.zip(\?|$)/i.test(activeUrl || '');
+  let pkgName = isAsar ? 'app.asar' : (isZip ? 'update.zip' : 'update.exe');
+  let downloadedPath = path.join(tempDir, pkgName);
+
   try {
-    sendProgress(5, `Downloading v${target.version}...`);
-    await downloadUpdateFile(target.downloadUrl, downloadedPath, (pct) => {
-      sendProgress(pct, `Downloading v${target.version}... ${pct}%`);
-    });
+    sendProgress(5, isAsar ? `Fast-patching v${target.version} (Live ASAR)...` : `Downloading v${target.version}...`);
+    try {
+      await downloadUpdateFile(activeUrl, downloadedPath, (pct) => {
+        sendProgress(pct, isAsar ? `Live patching v${target.version}... ${pct}%` : `Downloading v${target.version}... ${pct}%`);
+      });
+      if (isAsar && (!fs.existsSync(downloadedPath) || fs.statSync(downloadedPath).size < 250000)) {
+        throw new Error('INVALID_ASAR');
+      }
+    } catch (asarErr) {
+      if (useAsarFastPatch && target.downloadUrl) {
+        useAsarFastPatch = false;
+        isAsar = false;
+        activeUrl = target.downloadUrl;
+        isZip = /\.zip(\?|$)/i.test(activeUrl);
+        pkgName = isZip ? 'update.zip' : 'update.exe';
+        downloadedPath = path.join(tempDir, pkgName);
+        sendProgress(8, `Switching to full installer v${target.version}...`);
+        await downloadUpdateFile(activeUrl, downloadedPath, (pct) => {
+          sendProgress(pct, `Downloading v${target.version}... ${pct}%`);
+        });
+      } else {
+        throw asarErr;
+      }
+    }
 
     ensureDirs();
     fs.writeFileSync(
@@ -1677,15 +1734,21 @@ async function installRemoteUpdate(manifest) {
     const escapedDownloaded = downloadedPath.replace(/'/g, "''");
     const escapedStage = stageDir.replace(/'/g, "''");
     const escapedExeName = exeName.replace(/'/g, "''");
+    const escapedTargetAsar = path.join(process.resourcesPath, 'app.asar').replace(/'/g, "''");
 
-    const isSetupExe = !isZip && /setup|installer/i.test(target.downloadUrl);
+    const isSetupExe = !isAsar && !isZip && /setup|installer/i.test(activeUrl);
     const scriptLines = [
       `$ErrorActionPreference = 'Stop'`,
       `$pidToWait = ${process.pid}`,
       `while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 250 }`,
       `Start-Sleep -Milliseconds 350`,
       `Unblock-File -Path '${escapedDownloaded}' -ErrorAction SilentlyContinue`,
-      isZip
+      isAsar
+        ? [
+            `Copy-Item -Path '${escapedDownloaded}' -Destination '${escapedTargetAsar}' -Force`,
+            `Start-Process -FilePath '${escapedExePath}'`
+          ].join('\r\n')
+        : isZip
         ? [
             `Expand-Archive -Path '${escapedDownloaded}' -DestinationPath '${escapedStage}' -Force`,
             `Get-ChildItem -Path '${escapedStage}' -Recurse -File | Unblock-File -ErrorAction SilentlyContinue`,
@@ -1876,6 +1939,31 @@ ipcMain.handle('dialog:pickBubbleMedia', async () => {
     url: `file:///${destPath.replace(/\\/g, '/')}`,
     kind: isVideo ? 'video' : 'image'
   };
+});
+
+ipcMain.handle('assets:cacheRemoteAsset', async (_event, payload) => {
+  const rawUrl = String(payload?.url || '').trim();
+  if (!/^https?:\/\//i.test(rawUrl)) return { ok: false, url: rawUrl };
+  try {
+    ensureDirs();
+    const urlObj = new URL(rawUrl);
+    let ext = path.extname(urlObj.pathname).toLowerCase();
+    if (!['.png', '.webp', '.gif', '.apng', '.jpg', '.jpeg', '.svg', '.mp4', '.webm'].includes(ext)) {
+      ext = payload?.kind === 'video' ? '.mp4' : '.png';
+    }
+    const hash = crypto.createHash('sha1').update(rawUrl).digest('hex').slice(0, 16);
+    const dest = path.join(ASSET_CACHE_DIR, `${hash}${ext}`);
+    if (fs.existsSync(dest) && fs.statSync(dest).size > 256) {
+      return { ok: true, url: pathToFileURL(dest).href, cached: true };
+    }
+    await downloadUpdateFile(rawUrl, dest);
+    if (fs.existsSync(dest) && fs.statSync(dest).size > 128) {
+      return { ok: true, url: pathToFileURL(dest).href, cached: false };
+    }
+    return { ok: false, url: rawUrl };
+  } catch {
+    return { ok: false, url: rawUrl };
+  }
 });
 
 ipcMain.handle('updater:applyLocalFile', async (_event, localFilePath) => {

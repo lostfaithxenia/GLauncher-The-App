@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('launcherAPI', {
   pickAvatarFile: () => ipcRenderer.invoke('dialog:pickAvatar'),
   pickVideoFile: () => ipcRenderer.invoke('dialog:pickVideo'),
   pickBubbleMedia: () => ipcRenderer.invoke('dialog:pickBubbleMedia'),
+  cacheRemoteAsset: (url, kind = 'image') => ipcRenderer.invoke('assets:cacheRemoteAsset', { url, kind }),
   applyLocalUpdateFile: (filePath) => ipcRenderer.invoke('updater:applyLocalFile', filePath),
   pickWallpaperFile: () => ipcRenderer.invoke('dialog:pickWallpaper'),
   pickAudioFile: () => ipcRenderer.invoke('dialog:pickAudio'),
@@ -44,6 +45,11 @@ contextBridge.exposeInMainWorld('launcherAPI', {
     const handler = (_event, data) => cb(data);
     ipcRenderer.on('game:runningChanged', handler);
     return () => ipcRenderer.removeListener('game:runningChanged', handler);
+  },
+  onPlaytimeRecorded: (cb) => {
+    const handler = (_event, data) => cb(data);
+    ipcRenderer.on('game:playtimeRecorded', handler);
+    return () => ipcRenderer.removeListener('game:playtimeRecorded', handler);
   },
   detectGameTrophies: (game) => ipcRenderer.invoke('trophies:detect', game),
   watchGameTrophies: (ctx) => ipcRenderer.invoke('trophies:watchGame', ctx),

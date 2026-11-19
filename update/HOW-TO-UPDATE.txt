@@ -1,31 +1,37 @@
 ====================================================================
-      GLauncher v0.3.1 - Holographic Gamer Passport (Safe Update)
+     GLauncher v0.4.0 - Mega Cartoon Polish & Asset Vault Update
 ====================================================================
 
 ALL YOUR CUSTOMIZATION IS 100% SAFE!
-Profiles, @handles, games, banners, roles, and ps3_pic/video/audio
+Profiles, unlocked VIP roles, games, banners, roles, and ps3 media
 are never deleted when updating.
 
-2 EASY WAYS TO UPDATE ANY PREVIOUSLY INSTALLED GLAUNCHER:
+3 EASY WAYS TO UPDATE ANY PREVIOUSLY INSTALLED GLAUNCHER:
 --------------------------------------------------------------------
-OPTION 1 (Fastest — 2-Second Drag & Drop):
-  - Drag "app.asar" directly onto your open GLauncher window (v0.3.0+),
-    OR double-click "Drop-In-Update-v0.3.1.bat" to auto-apply it!
+OPTION 1 (1-Click Inside GLauncher!):
+  - Open GLauncher -> when the v0.4.0 update banner appears, click
+    Install Update! (From v0.4.0 onward, live updates patch app.asar
+    automatically in ~3 seconds!)
 
-OPTION 2 (Standard Installer):
-  - Close GLauncher and run "GLauncher-Setup-0.3.1.exe".
+OPTION 2 (2-Second Drag & Drop):
+  - Drag "app.asar" directly onto your open GLauncher window,
+    OR double-click "Drop-In-Update-v0.4.0.bat" to auto-apply it!
 
-WHAT'S NEW IN v0.3.1:
+OPTION 3 (Full Installer):
+  - Close GLauncher and run "GLauncher-Setup-0.4.0.exe".
+
+WHAT'S NEW IN v0.4.0:
 --------------------------------------------------------------------
-  * Original GLauncher Holographic Gamer Passport Profile Studio:
-      - Wide holographic hero card on top (live 3D spinning disc,
-        Trophy Level, revamped 3D foil roles, animated status pill)
-      - Horizontal pill nav bar + spacious 2-column dock (no squishing!)
-  * True 3D WebGL Interactive Profile Effects (Three.js parallax orbs,
-    cosmic rings, crystals, petals, embers) + 12 Animated WebP Assets
-  * Revamped 3D Foil Collector Roles with metallic sheen & animated
-    icons (Viera DEV, Joshua, Ruben, Founder, Streamer, VIP)
-  * PS3 XMB Auto-Contrast Text: auto-switches text/icons to black on
-    white/light backgrounds and white on dark/black backgrounds
-  * Fixed game-exit black/white transition screen
+  * In-App Asset Vault: ALL 697+ Animated Avatar Decorations across
+    68 categories + Paste ANY GIF/WebP/PNG/MP4 URL (cached offline!)
+  * Buttery Cartoonish Discord-Style Spring UI Revamp + 14 CC0
+    Obsidian & Orbit UI Sound Effects
+  * Role-Driven Animated Username Colors & FX + Custom Role FX Picker
+  * Code-Locked VIP Roles (Joshua & Ruben) saved permanently across
+    all future updates once unlocked
+  * Orbit 3D Bubbles v2: Audio-Reactive Beat Pulse, Clickable Cinema
+    Lightbox & 4 Bubble Styles (Crystal, Neon, Prism, Soap)
+  * Live Friend Holographic Passport Peek + Live Role Colors in VC
+  * Real Playtime Tracking + Customizable Game Launch Cinematics
+  * Zero Broken Images + Full Xbox/PS Controller Navigation
 ====================================================================

@@ -58,11 +58,16 @@
     }
     .vc-name {
       font-size: 12.5px;
-      font-weight: 700;
+      font-weight: 800;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    @keyframes vcGrad { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .vc-name.fx-joshua { background: linear-gradient(95deg, #fef08a, #facc15, #fff, #f59e0b); background-size: 220% 100%; -webkit-background-clip: text; color: transparent; animation: vcGrad 3s linear infinite; filter: drop-shadow(0 0 6px rgba(250,204,21,0.75)); }
+    .vc-name.fx-ruben { background: linear-gradient(95deg, #fda4af, #f43f5e, #fb923c, #fde047); background-size: 220% 100%; -webkit-background-clip: text; color: transparent; animation: vcGrad 2.5s linear infinite; filter: drop-shadow(0 0 6px rgba(244,63,94,0.8)); }
+    .vc-name.fx-viera { background: linear-gradient(95deg, #67e8f9, #38bdf8, #e0f2fe, #818cf8); background-size: 220% 100%; -webkit-background-clip: text; color: transparent; animation: vcGrad 2.8s linear infinite; filter: drop-shadow(0 0 6px rgba(34,211,238,0.8)); }
+    .vc-name.fx-mythic { background: linear-gradient(95deg, #f472b6, #c084fc, #38bdf8, #facc15); background-size: 240% 100%; -webkit-background-clip: text; color: transparent; animation: vcGrad 3.2s linear infinite; }
     .vc-muted {
       font-size: 10px;
       color: #f87171;
@@ -84,8 +89,18 @@
         const img = document.createElement('img');
         img.className = 'vc-avatar';
         img.src = p.avatar || './assets/maxmb/icons/avatars/firmware/000.png';
+        img.onerror = () => { img.src = './assets/maxmb/icons/avatars/firmware/000.png'; };
         const span = document.createElement('span');
         span.className = 'vc-name';
+        const roles = Array.isArray(p.roles) ? p.roles : [];
+        const top = roles.find((r) => r.tier === 'special-joshua') || roles.find((r) => r.tier === 'special-ruben') || roles.find((r) => r.tier === 'dev-viera') || roles.find((r) => r.tier === 'mythic') || roles[roles.length - 1];
+        if (top) {
+          if (top.tier === 'special-joshua' || top.nameFx === 'joshua') span.classList.add('fx-joshua');
+          else if (top.tier === 'special-ruben' || top.nameFx === 'ruben') span.classList.add('fx-ruben');
+          else if (top.tier === 'dev-viera' || top.nameFx === 'viera') span.classList.add('fx-viera');
+          else if (top.tier === 'mythic' || top.nameFx === 'mythic') span.classList.add('fx-mythic');
+          else if (top.color) span.style.color = top.color;
+        }
         span.textContent = p.name || p.handle || 'Player';
         pill.appendChild(img);
         pill.appendChild(span);

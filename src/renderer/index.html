@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; media-src 'self' file:; connect-src 'self' wss: https: ws:; style-src 'self' 'unsafe-inline'; font-src 'self' file: data:; script-src 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https:; media-src 'self' file: https: blob:; connect-src 'self' wss: https: ws:; style-src 'self' 'unsafe-inline'; font-src 'self' file: data:; script-src 'self';" />
   <title>GLauncher Alpha</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -394,7 +394,14 @@
           <div class="orbit-topbar">
             <div id="orbitCategories" class="orbit-cat-pills" role="tablist"></div>
             <div class="orbit-top-actions">
-              <button type="button" id="btnOrbitAddBubble" class="btn-primary btn-xs">+ Add 3D Bubble (Photo/Video)</button>
+              <select id="orbitBubbleStyleSelect" class="select-input orbit-style-select" title="3D Bubble Visual Style">
+                <option value="crystal">🫧 Crystal Glass</option>
+                <option value="neon">⚡ Neon Hologram</option>
+                <option value="prism">💎 Frosted Prism</option>
+                <option value="soap">🌈 Iridescent Soap</option>
+              </select>
+              <button type="button" id="btnOrbitBeatToggle" class="btn-secondary btn-xs active" title="Pulse 3D bubbles to music beat">🎵 Beat FX: ON</button>
+              <button type="button" id="btnOrbitAddBubble" class="btn-primary btn-xs">+ Add 3D Bubble</button>
               <button type="button" id="btnOrbitRefresh" class="btn-secondary btn-xs" title="Refresh Orbit Theme (F5)">&#x21bb;</button>
               <button type="button" id="btnOrbitOptions" class="btn-secondary btn-xs">Studio &amp; Themes</button>
             </div>
@@ -698,6 +705,10 @@
                     <span><img src="assets/maxmb/icons/trophies/trophy_silver.svg" alt="" /><b id="passportSilverCount">0</b></span>
                     <span><img src="assets/maxmb/icons/trophies/trophy_bronze.svg" alt="" /><b id="passportBronzeCount">0</b></span>
                   </div>
+                  <div id="passportPlaytimeBar" class="passport-playtime-bar">
+                    <span id="passportTotalHours">⏱ 0.0h Played</span>
+                    <span id="passportTopGame" class="passport-top-game">🎮 Ready to Play</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -707,8 +718,9 @@
               <button type="button" class="pw-nav-btn active" data-pw="identity">Identity</button>
               <button type="button" class="pw-nav-btn" data-pw="appearance">Avatar &amp; Swatches</button>
               <button type="button" class="pw-nav-btn" data-pw="effects">3D Effects &amp; Rings</button>
+              <button type="button" class="pw-nav-btn vault-nav-pill" data-pw="vault">🛒 Asset Vault (697+)</button>
               <button type="button" class="pw-nav-btn" data-pw="roles">Special Roles</button>
-              <button type="button" class="pw-nav-btn" data-pw="themes">Themes &amp; PS3</button>
+              <button type="button" class="pw-nav-btn" data-pw="themes">Themes &amp; Audio</button>
               <button type="button" class="pw-nav-btn" data-pw="accounts">Switch Profile</button>
             </nav>
 
@@ -853,6 +865,33 @@
                 </div>
               </div>
 
+              <!-- PANE 3.5: IN-APP ASSET VAULT (697+ DISCORD DECORATIONS + URL IMPORTER) -->
+              <div class="pw-pane passport-vault-pane hidden" data-pw-pane="vault">
+                <div class="passport-card-box vault-url-box">
+                  <div class="passport-box-label">Paste Any Animated URL (GIPHY / Tenor / Discord / MotionBgs — Auto-Cached Offline!)</div>
+                  <div class="vault-url-row">
+                    <input id="vaultCustomUrlInput" type="url" class="text-input" placeholder="https://... (.gif, .webp, .png, .apng, .mp4)" />
+                    <select id="vaultCustomUrlTarget" class="select-input" style="max-width:190px;">
+                      <option value="deco">Avatar Frame / Ring</option>
+                      <option value="banner">Passport Banner</option>
+                      <option value="effect">Passport 2D Overlay</option>
+                      <option value="bubble">Orbit 3D Bubble</option>
+                      <option value="xmb">PS3 XMB Wallpaper</option>
+                    </select>
+                    <button type="button" id="btnVaultApplyUrl" class="btn-primary btn-sm">✨ Cache &amp; Apply</button>
+                  </div>
+                </div>
+
+                <div class="passport-card-box vault-catalog-box">
+                  <div class="vault-catalog-head">
+                    <div class="passport-box-label" style="margin:0;">Animated Avatar Decorations Vault (<span id="vaultCountBadge">697</span> Free Assets)</div>
+                    <input id="vaultSearchInput" type="search" class="text-input vault-search-input" placeholder="Search decorations (e.g. sakura, dragon, cyber, cat, flame)..." />
+                  </div>
+                  <div id="vaultCategoryBar" class="vault-category-bar"></div>
+                  <div id="vaultDecoGrid" class="vault-deco-grid"></div>
+                </div>
+              </div>
+
               <!-- PANE 4: REVAMPED 3D FOIL COLLECTOR ROLES -->
               <div class="pw-pane passport-grid-2 hidden" data-pw-pane="roles">
                 <div class="passport-card-box">
@@ -862,13 +901,15 @@
                       <img class="foil-role-anim" src="./assets/profile-fx/animated/zap.webp" alt="" />
                       <span>VIERA • DEV</span>
                     </button>
-                    <button type="button" class="foil-role-emblem role-tier-special-joshua quick-role-preset" data-rname="JOSHUA" data-ricon="" data-rcolor="#facc15" data-rtier="special-joshua" data-rimg="./assets/profile-fx/animated/crown.webp">
+                    <button type="button" class="foil-role-emblem role-tier-special-joshua quick-role-preset" data-lock-key="joshua" data-rname="JOSHUA" data-ricon="" data-rcolor="#facc15" data-rtier="special-joshua" data-rimg="./assets/profile-fx/animated/crown.webp">
                       <img class="foil-role-anim" src="./assets/profile-fx/animated/crown.webp" alt="" />
                       <span>✦ JOSHUA</span>
+                      <span class="role-lock-tag" data-lock-badge="joshua">🔒</span>
                     </button>
-                    <button type="button" class="foil-role-emblem role-tier-special-ruben quick-role-preset" data-rname="RUBEN" data-ricon="" data-rcolor="#f43f5e" data-rtier="special-ruben" data-rimg="./assets/profile-fx/animated/fire.webp">
+                    <button type="button" class="foil-role-emblem role-tier-special-ruben quick-role-preset" data-lock-key="ruben" data-rname="RUBEN" data-ricon="" data-rcolor="#f43f5e" data-rtier="special-ruben" data-rimg="./assets/profile-fx/animated/fire.webp">
                       <img class="foil-role-anim" src="./assets/profile-fx/animated/fire.webp" alt="" />
                       <span>✦ RUBEN</span>
+                      <span class="role-lock-tag" data-lock-badge="ruben">🔒</span>
                     </button>
                     <button type="button" class="foil-role-emblem role-tier-mythic quick-role-preset" data-rname="FOUNDER" data-ricon="" data-rcolor="#facc15" data-rtier="mythic" data-rimg="./assets/profile-fx/animated/star.webp">
                       <img class="foil-role-anim" src="./assets/profile-fx/animated/star.webp" alt="" />
@@ -890,13 +931,23 @@
                   <div class="role-creator-row">
                     <input id="newRoleIconInput" type="text" class="text-input" maxlength="4" placeholder="⚡" style="max-width:48px; text-align:center;" />
                     <input id="newRoleNameInput" type="text" class="text-input" maxlength="22" placeholder="Custom role name..." />
-                    <select id="newRoleTierSelect" class="select-input" style="max-width:140px;">
+                    <select id="newRoleTierSelect" class="select-input" style="max-width:136px;">
                       <option value="standard">Glass Foil</option>
                       <option value="super">✦ Super Foil</option>
                       <option value="mythic">🔥 Mythic Foil</option>
                       <option value="dev-viera">⚡ Viera DEV</option>
-                      <option value="special-joshua">👑 Joshua Special</option>
-                      <option value="special-ruben">🔥 Ruben Special</option>
+                      <option value="special-joshua">🔒 Joshua Special</option>
+                      <option value="special-ruben">🔒 Ruben Special</option>
+                    </select>
+                    <select id="newRoleNameFxSelect" class="select-input" style="max-width:142px;" title="Username Animation Effect">
+                      <option value="">Name FX: Auto</option>
+                      <option value="joshua">✨ Liquid Gold</option>
+                      <option value="ruben">🔥 Molten Flame</option>
+                      <option value="viera">⚡ Cyber Electric</option>
+                      <option value="mythic">🌈 Prismatic Holo</option>
+                      <option value="glitch">👾 Glitch Neon</option>
+                      <option value="rainbow">🎡 Rainbow Wave</option>
+                      <option value="neonpulse">💫 Neon Pulse</option>
                     </select>
                     <input id="newRoleColorInput" type="color" value="#38bdf8" class="color-picker color-picker-inline" />
                     <button type="button" id="btnAddProfileRole" class="btn-primary btn-sm">+ Add</button>
@@ -953,6 +1004,18 @@
                     <div class="form-field">
                       <label for="settingUiAccent">UI Accent</label>
                       <input id="settingUiAccent" type="color" value="#38bdf8" class="color-picker" />
+                    </div>
+                  </div>
+                  <div class="split-2" style="margin-top:6px;">
+                    <label class="check-row"><input id="settingObsidianSounds" type="checkbox" checked /><span>🔊 Obsidian &amp; Orbit UI Sounds</span></label>
+                    <div class="form-field" style="margin:0;">
+                      <label for="settingLaunchCinematic" style="font-size:11px;">Game Launch Cinematic</label>
+                      <select id="settingLaunchCinematic" class="select-input">
+                        <option value="cartoon">✨ Cartoon Pop</option>
+                        <option value="disc">💿 3D Disc Spin</option>
+                        <option value="ps3">🎮 PS3 Gloss</option>
+                        <option value="instant">⚡ Instant (Off)</option>
+                      </select>
                     </div>
                   </div>
                   <div class="form-field" style="margin-top:4px;">
@@ -1420,6 +1483,86 @@
           <button id="btnTutorialNext" class="btn-primary btn-sm">Next →</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Exclusive Role Unlock Code Modal (Name-Locked VIP Roles) -->
+  <div id="roleCodeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Unlock Exclusive Role">
+    <div class="modal-card role-code-modal-card">
+      <div class="modal-header">
+        <div class="role-code-header-title">
+          <img id="roleCodeModalImg" class="foil-role-anim" src="./assets/profile-fx/animated/crown.webp" alt="" />
+          <h3 id="roleCodeModalTitle">Unlock Exclusive Role</h3>
+        </div>
+        <button id="btnRoleCodeClose" class="icon-btn" type="button" title="Close">✕</button>
+      </div>
+      <form id="roleCodeForm" class="stack-form">
+        <p id="roleCodeModalDesc" class="hint-text">This role is name-locked. Enter the secret code to unlock it permanently across all future updates.</p>
+        <div class="form-field">
+          <label for="roleCodeInput">Secret Access Code</label>
+          <input id="roleCodeInput" type="password" inputmode="numeric" autocomplete="off" class="text-input role-code-input" maxlength="12" placeholder="Enter code..." required />
+        </div>
+        <div id="roleCodeError" class="role-code-error hidden">Incorrect access code. Try again.</div>
+        <div class="modal-footer">
+          <button type="button" id="btnRoleCodeCancel" class="btn-secondary btn-sm">Cancel</button>
+          <button type="submit" id="btnRoleCodeSubmit" class="btn-primary btn-sm">🔓 Unlock Permanently</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Orbit 3D Bubble Fullscreen Cinema Lightbox -->
+  <div id="orbitBubbleLightbox" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Orbit Bubble Viewer">
+    <div class="orbit-lightbox-card">
+      <button type="button" id="btnOrbitLightboxClose" class="icon-btn orbit-lb-close" title="Close">✕</button>
+      <button type="button" id="btnOrbitLbPrev" class="icon-btn orbit-lb-nav orbit-lb-prev" title="Previous">◀</button>
+      <div id="orbitLightboxMediaHost" class="orbit-lb-media-host"></div>
+      <button type="button" id="btnOrbitLbNext" class="icon-btn orbit-lb-nav orbit-lb-next" title="Next">▶</button>
+      <div class="orbit-lb-footer">
+        <span id="orbitLightboxLabel" class="orbit-lb-label">Orbit 3D Bubble</span>
+        <button type="button" id="btnOrbitLbDelete" class="btn-secondary btn-xs">🗑 Remove Bubble</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Friend Holographic Passport Modal -->
+  <div id="friendPassportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Friend Passport">
+    <div id="friendPassportCard" class="modal-card friend-passport-card">
+      <div id="friendPassportBanner" class="friend-passport-banner">
+        <button type="button" id="btnFriendPassportClose" class="icon-btn friend-passport-close" title="Close">✕</button>
+      </div>
+      <div class="friend-passport-body">
+        <div class="friend-passport-head">
+          <div id="friendPassportAvatarWrap" class="passport-avatar-wrap deco-none friend-av-wrap">
+            <img id="friendPassportAvatarImg" class="passport-avatar-img" src="./assets/maxmb/icons/avatars/firmware/000.png" alt="" />
+            <img id="friendPassportDecoImg" class="avatar-deco-overlay hidden" alt="" />
+            <span id="friendPassportStatusDot" class="live-status-dot status-online"></span>
+          </div>
+          <div class="friend-passport-title-col">
+            <h3 id="friendPassportName" class="passport-display-name" style="font-size:24px;">Friend</h3>
+            <div id="friendPassportHandle" class="passport-subhandle">@friend</div>
+            <div id="friendPassportActivity" class="passport-status-pill" style="margin-top:4px;">Just browsing</div>
+          </div>
+        </div>
+        <p id="friendPassportBio" class="passport-bio" style="margin:10px 0;"></p>
+        <div id="friendPassportRoles" class="passport-roles-row" style="margin-bottom:12px;"></div>
+        <div class="friend-passport-footer">
+          <span id="friendPassportTrophies" class="hint-text">🏆 0 Trophies</span>
+          <button type="button" id="btnFriendPassportVc" class="btn-primary btn-sm">🎙 Join Voice Chat</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Launch Cinematic Splash -->
+  <div id="gameLaunchCinematic" class="launch-cinematic hidden" aria-hidden="true">
+    <div class="launch-cin-bg"></div>
+    <div class="launch-cin-card">
+      <div class="launch-cin-disc-ring">
+        <img id="launchCinCover" class="launch-cin-cover" src="" alt="" />
+      </div>
+      <div id="launchCinTitle" class="launch-cin-title">Launching Game...</div>
+      <div id="launchCinSub" class="launch-cin-sub">PREPARING PHYSICAL MEDIA STAGE</div>
     </div>
   </div>
 

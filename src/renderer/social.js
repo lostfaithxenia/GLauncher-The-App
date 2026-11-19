@@ -242,16 +242,34 @@ export class SocialClient {
     const handle = normalizeHandle(this.myProfile.handle || this.myProfile.name);
     if (!handle) return;
     const isPlaying = Boolean(this.runningGame?.title);
+    const decoRaw = String(this.myProfile.avatarDecoration || 'none');
+    const safeDeco = decoRaw.startsWith('url:file://') ? (this.myProfile.avatarDecorationRemote || 'none') : decoRaw;
+    const rawBanner = String(this.myProfile.banner || '');
+    const safeBanner = rawBanner.includes('file://') ? 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)' : rawBanner;
     const payload = {
       handle,
       name: this.myProfile.name || handle,
+      pronouns: this.myProfile.pronouns || '',
+      bio: (this.myProfile.bio || '').slice(0, 180),
       avatar: this.myProfile.avatar && !this.myProfile.avatar.startsWith('file://') ? this.myProfile.avatar : './assets/maxmb/icons/avatars/firmware/000.png',
+      avatarDecoration: safeDeco,
+      banner: safeBanner,
+      profilePrimaryColor: this.myProfile.profilePrimaryColor || '#1e1b4b',
+      profileAccentColor: this.myProfile.profileAccentColor || this.myProfile.color || '#38bdf8',
+      profileEffect: this.myProfile.profileEffect || 'none',
+      trophyCount: Array.isArray(this.myProfile.achievements) ? this.myProfile.achievements.length : 0,
       status: this.myProfile.status || 'online',
       customStatus: this.myProfile.customStatus || '',
       activity: isPlaying ? `Playing ${this.runningGame.title}` : 'Just browsing',
       gameTitle: isPlaying ? this.runningGame.title : '',
       startedAt: isPlaying ? (this.runningGame.startedAt || Date.now()) : null,
-      roles: (this.myProfile.roles || []).slice(0, 3),
+      roles: (this.myProfile.roles || []).slice(0, 4).map((r) => ({
+        name: r.name,
+        color: r.color || '#38bdf8',
+        tier: r.tier || 'standard',
+        nameFx: r.nameFx || '',
+        img: r.img && !String(r.img).startsWith('file://') ? r.img : ''
+      })),
       inVc: this.vcActive,
       vcRoomId: this.vcRoomId || '',
       updatedAt: Date.now()
@@ -286,7 +304,15 @@ export class SocialClient {
       out.push({
         handle: h,
         name: st?.name || h,
+        pronouns: st?.pronouns || '',
+        bio: st?.bio || '',
         avatar: st?.avatar || './assets/maxmb/icons/avatars/firmware/000.png',
+        avatarDecoration: st?.avatarDecoration || 'none',
+        banner: st?.banner || 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)',
+        profilePrimaryColor: st?.profilePrimaryColor || '#1e1b4b',
+        profileAccentColor: st?.profileAccentColor || '#38bdf8',
+        profileEffect: st?.profileEffect || 'none',
+        trophyCount: st?.trophyCount || 0,
         status: isOnline ? (st.status || 'online') : 'offline',
         activity: isOnline ? (st.activity || 'Just browsing') : 'Offline',
         gameTitle: isOnline ? (st.gameTitle || '') : '',
@@ -529,15 +555,18 @@ export class SocialClient {
         handle: myHandle,
         name: this.myProfile?.name || myHandle,
         avatar: this.myProfile?.avatar || './assets/maxmb/icons/avatars/firmware/000.png',
+        roles: this.myProfile?.roles || [],
         speaking: this.mySpeaking,
         muted: this.muted,
         isSelf: true
       });
       for (const [h, p] of this.peers.entries()) {
+        const st = this.friendStates.get(h);
         participants.push({
           handle: h,
           name: p.name,
           avatar: p.avatar,
+          roles: st?.roles || [],
           speaking: p.speaking,
           muted: p.muted,
           isSelf: false

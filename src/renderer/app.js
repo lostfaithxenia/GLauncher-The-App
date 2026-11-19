@@ -4,14 +4,17 @@ import { SocialClient, normalizeHandle } from './social.js';
 import { ProfileEffectCanvas } from './profile-fx.js';
 import { Passport3DStage, PassportMiniDisc3D } from './passport3d.js';
 import { XmbAudio, runPs3Intro, cancelPs3Intro, runPs3GameLaunchSplash } from './xmb-media.js';
+import { ObsidianSfxEngine } from './obsidian-sfx.js';
 
 const api = window.launcherAPI;
 const xmbAudio = new XmbAudio();
+const obsidianSfx = new ObsidianSfxEngine();
 
 const state = {
   activeProfileId: 'profile-default',
   profiles: [],
   tutorialCompleted: false,
+  unlockedRoles: [],
   tutorialStep: 0,
   avatarGalleryTab: 'gradient',
   bindingHomeButton: false,
@@ -484,6 +487,7 @@ function showToast(message) {
 async function persist() {
   await api.saveProfiles({
     tutorialCompleted: state.tutorialCompleted,
+    unlockedRoles: Array.isArray(state.unlockedRoles) ? state.unlockedRoles : [],
     activeProfileId: state.activeProfileId,
     profiles: state.profiles
   });
@@ -837,7 +841,7 @@ function applyProfileThemeAndGraphics() {
   const settings = activeSettings();
   const theme = settings.theme || 'obsidian';
   const glass = settings.glassStyle || 'liquid';
-  const hasSpecialRole = Array.isArray(profile.roles) && profile.roles.some((r) => r.tier === 'super' || r.tier === 'mythic');
+  const hasSpecialRole = Array.isArray(profile.roles) && profile.roles.some((r) => ['super', 'mythic', 'dev-viera', 'special-joshua', 'special-ruben'].includes(r.tier));
   const pfpFrame = settings.pfpFrame || (hasSpecialRole ? 'dev-sparkle' : 'neon');
   const effectiveFrame = settings.pfpFrame === 'minimal' ? 'minimal' : (hasSpecialRole && settings.pfpFrame === 'neon' ? 'dev-sparkle' : pfpFrame);
   const accent = settings.uiAccent || profile.color || '#38bdf8';
@@ -850,6 +854,7 @@ function applyProfileThemeAndGraphics() {
   }
   xmbAudio.enabled = theme === 'xmb' && settings.xmbSounds !== false;
   xmbAudio.setSoundSet(settings.xmbSoundSet || 'ps3');
+  obsidianSfx.enabled = settings.obsidianSounds !== false;
   const hasWallpaper = syncXmbWallpaper();
 
   const is3dNeeded =
@@ -910,7 +915,10 @@ function renderProfileCardAndHud() {
 
   // 1. Forefront Corner Profile Pill
   renderAvatarInto(els.forefrontPfpImg, els.forefrontPfpFallback, profile);
-  if (els.profileNameLabel) els.profileNameLabel.textContent = profile.name;
+  if (els.profileNameLabel) {
+    els.profileNameLabel.textContent = profile.name;
+    applyRoleNameStyle(els.profileNameLabel, profile);
+  }
   if (els.profileLevelPill) els.profileLevelPill.textContent = `★ LV ${stats.level}`;
   if (els.profileCustomStatusLabel) {
     els.profileCustomStatusLabel.textContent =
@@ -962,7 +970,10 @@ function renderProfileCardAndHud() {
   if (els.profileTrophyCountBadge) {
     els.profileTrophyCountBadge.textContent = `🏆 ${stats.total}`;
   }
-  if (els.profileCardName) els.profileCardName.textContent = profile.name;
+  if (els.profileCardName) {
+    els.profileCardName.textContent = profile.name;
+    applyRoleNameStyle(els.profileCardName, profile);
+  }
   if (els.profileCardHandle) {
     els.profileCardHandle.textContent = profile.handle || `@${profile.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
   }
@@ -1280,6 +1291,7 @@ function renderProfileRolesEditor() {
     });
     els.profileRolesEditorList.appendChild(pill);
   });
+  if (typeof syncLockedRoleButtons === 'function') syncLockedRoleButtons();
 }
 
 function renderTrophiesTab() {
@@ -2972,6 +2984,7 @@ async function runConsoleLaunch(game, testOnly = false) {
       activePs3BootHandle?.finish();
       activePs3BootHandle = null;
       stage3d?.releaseConsoleWait?.();
+      obsidianSfx.play('error');
       if (result.error === 'FILE_NOT_FOUND') {
         showToast('Executable not found on disk — update the .exe path in Options.');
         state.creatingNewGame = false;
@@ -2980,6 +2993,11 @@ async function runConsoleLaunch(game, testOnly = false) {
         showToast(`Could not launch: ${result.error}`);
       }
       return;
+    }
+
+    obsidianSfx.play('launch');
+    if (typeof playGameLaunchCinematic === 'function' && activeSettings().theme !== 'xmb') {
+      playGameLaunchCinematic(game);
     }
 
     game.playCount = (game.playCount || 0) + 1;
@@ -4750,22 +4768,34 @@ function bindEvents() {
       const rName = btn.dataset.rname || 'Member';
       const rIcon = btn.dataset.ricon || '';
       const rImg = btn.dataset.rimg || '';
+      const rColor = btn.dataset.rcolor || '#38bdf8';
+      const rTier = btn.dataset.rtier || 'standard';
+      const lockKey = btn.dataset.lockKey || findLockedRoleKey(rName, rTier);
       const fullName = rIcon ? `${rIcon} ${rName}`.trim() : rName;
-      if (profile.roles.some((r) => r.name === fullName)) {
-        showToast(`Role "${fullName}" already added`);
+
+      const equipPresetRole = async () => {
+        if (profile.roles.some((r) => r.name === fullName || (lockKey && r.tier === rTier))) {
+          showToast(`Role "${fullName}" already equipped`);
+          return;
+        }
+        profile.roles.push({
+          id: `role-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          name: fullName,
+          color: rColor,
+          tier: rTier,
+          img: rImg
+        });
+        await persist();
+        render();
+        renderProfileRolesEditor();
+        showToast(`Equipped Role "${fullName}" — Username style updated!`);
+      };
+
+      if (lockKey && !isRoleUnlocked(lockKey)) {
+        openRoleUnlockModal(LOCKED_ROLES[lockKey], equipPresetRole);
         return;
       }
-      profile.roles.push({
-        id: `role-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-        name: fullName,
-        color: btn.dataset.rcolor || '#38bdf8',
-        tier: btn.dataset.rtier || 'standard',
-        img: rImg
-      });
-      await persist();
-      render();
-      renderProfileRolesEditor();
-      showToast(`Added Role "${fullName}"`);
+      await equipPresetRole();
     });
   });
 
@@ -4779,21 +4809,32 @@ function bindEvents() {
     const name = icon ? `${icon} ${rawName}` : rawName;
     const color = els.newRoleColorInput?.value || '#38bdf8';
     const tier = els.newRoleTierSelect?.value || 'standard';
-    const profile = activeProfile();
-    if (!Array.isArray(profile.roles)) profile.roles = [];
-    profile.roles.push({
-      id: `role-${Date.now()}`,
-      name,
-      color,
-      tier
-    });
-    if (els.newRoleNameInput) els.newRoleNameInput.value = '';
-    if (els.newRoleIconInput) els.newRoleIconInput.value = '';
-    await persist();
-    render();
-    renderProfileRolesEditor();
-    unlockAchievement(GLOBAL_TROPHIES[1], true);
-    showToast(`Added ${tier === 'mythic' ? 'Mythic' : tier === 'super' ? 'Super' : ''} Role "${name}"`);
+    const nameFx = document.getElementById('newRoleNameFxSelect')?.value || '';
+    const lockKey = findLockedRoleKey(rawName, tier);
+
+    const addCustomRole = async () => {
+      const profile = activeProfile();
+      if (!Array.isArray(profile.roles)) profile.roles = [];
+      profile.roles.push({
+        id: `role-${Date.now()}`,
+        name,
+        color,
+        tier,
+        nameFx
+      });
+      if (els.newRoleNameInput) els.newRoleNameInput.value = '';
+      if (els.newRoleIconInput) els.newRoleIconInput.value = '';
+      await persist();
+      render();
+      renderProfileRolesEditor();
+      showToast(`Added ${tier === 'mythic' ? 'Mythic' : tier === 'super' ? 'Super' : ''} Role "${name}"`);
+    };
+
+    if (lockKey && !isRoleUnlocked(lockKey)) {
+      openRoleUnlockModal(LOCKED_ROLES[lockKey], addCustomRole);
+      return;
+    }
+    await addCustomRole();
   });
 
   els.settingXmbWaveStyle?.addEventListener('change', async () => {
@@ -5750,6 +5791,7 @@ async function init() {
   state.activeProfileId = store.activeProfileId;
   state.profiles = store.profiles;
   state.tutorialCompleted = Boolean(store.tutorialCompleted);
+  state.unlockedRoles = Array.isArray(store.unlockedRoles) ? store.unlockedRoles : [];
   state.selectedId = activeGames()[0]?.id || null;
 
   // Keep user's chosen theme across boots (default to obsidian only if unset)
@@ -5764,6 +5806,8 @@ async function init() {
   initSocialAndVc();
   initDiscordProfileStudio();
   initOrbitTheme();
+  obsidianSfx.wireGlobalUiSounds(() => activeSettings().theme);
+  initV040MegaFeatures();
   render();
 
   // App-wide non-blocking startup splash reveal
@@ -5896,7 +5940,14 @@ function renderFriendsTab() {
     meta.className = 'friend-meta';
     const nameEl = document.createElement('div');
     nameEl.className = 'friend-name';
-    nameEl.innerHTML = `${f.name}<span class="friend-handle">${f.handle}</span>`;
+    const nameTextSpan = document.createElement('span');
+    nameTextSpan.textContent = f.name;
+    applyRoleNameStyle(nameTextSpan, f);
+    const handleSpan = document.createElement('span');
+    handleSpan.className = 'friend-handle';
+    handleSpan.textContent = f.handle;
+    nameEl.appendChild(nameTextSpan);
+    nameEl.appendChild(handleSpan);
     const actEl = document.createElement('div');
     actEl.className = `friend-activity${f.gameTitle ? ' playing' : ''}`;
     actEl.textContent = f.status === 'offline' ? 'Offline' : (f.activity || 'Just browsing');
@@ -5905,6 +5956,9 @@ function renderFriendsTab() {
 
     left.appendChild(avWrap);
     left.appendChild(meta);
+    left.style.cursor = 'pointer';
+    left.title = 'Click to view Holographic Gamer Passport';
+    left.addEventListener('click', () => openFriendPassport(f));
 
     const actions = document.createElement('div');
     actions.className = 'friend-actions';
@@ -6187,7 +6241,10 @@ function renderDiscordLivePreview() {
   if (thoughtBubble) thoughtBubble.classList.toggle('hidden', !cs && false);
 
   const nameEl = document.getElementById('discordLiveName');
-  if (nameEl) nameEl.textContent = profile.name || 'Player 1';
+  if (nameEl) {
+    nameEl.textContent = profile.name || 'Player 1';
+    applyRoleNameStyle(nameEl, profile);
+  }
 
   const subEl = document.getElementById('discordLiveSubHandle');
   if (subEl) {
@@ -6222,6 +6279,21 @@ function renderDiscordLivePreview() {
   if (exBtn) {
     exBtn.style.background = accent;
     exBtn.textContent = currentRunningGame?.title ? `Playing ${currentRunningGame.title}` : 'Profile Active';
+  }
+
+  // Playtime & Most-Played Game Stats on Holographic Passport
+  const totalHrsEl = document.getElementById('passportTotalHours');
+  const topGameEl = document.getElementById('passportTopGame');
+  if (totalHrsEl || topGameEl) {
+    const games = activeGames();
+    const totalSec = games.reduce((sum, g) => sum + (Number(g.playtimeSeconds) || 0), 0);
+    const hrs = (totalSec / 3600).toFixed(1);
+    if (totalHrsEl) totalHrsEl.textContent = `⏱ ${hrs}h Played`;
+    const sorted = [...games].sort((a, b) => ((b.playtimeSeconds || 0) - (a.playtimeSeconds || 0)) || ((b.playCount || 0) - (a.playCount || 0)));
+    const top = sorted[0];
+    if (topGameEl) {
+      topGameEl.textContent = top ? `🎮 Top: ${top.title}` : '🎮 Ready to Play';
+    }
   }
 
   const fxMeta = DISCORD_PROFILE_EFFECTS.find((e) => e.id === effectId) || DISCORD_PROFILE_EFFECTS[0];
@@ -6705,6 +6777,9 @@ async function addOrbitBubbleInteractive(replaceId = null) {
 function renderOrbitBubbles() {
   const stage = els.orbitBubblesStage;
   if (!stage) return;
+  const bStyle = activeSettings().orbitBubbleStyle || 'crystal';
+  stage.classList.remove('bubble-style-crystal', 'bubble-style-neon', 'bubble-style-prism', 'bubble-style-soap');
+  stage.classList.add(`bubble-style-${bStyle}`);
   stage.innerHTML = '';
 
   const bubbles = Array.isArray(activeSettings().orbitBubbles) ? activeSettings().orbitBubbles : [];
@@ -6755,8 +6830,12 @@ function renderOrbitBubbles() {
         renderOrbitBubbles();
       });
       el.appendChild(btnRem);
-      el.title = 'Click to replace photo/video in this 3D bubble';
-      el.addEventListener('click', () => addOrbitBubbleInteractive(data.id));
+      el.title = 'Click to open Fullscreen Cinema • Right-click to replace media';
+      el.addEventListener('click', () => openOrbitBubbleLightbox(data.id));
+      el.addEventListener('contextmenu', (ev) => {
+        ev.preventDefault();
+        addOrbitBubbleInteractive(data.id);
+      });
     } else {
       const ph = document.createElement('div');
       ph.className = 'orbit-bubble-placeholder';
@@ -6973,3 +7052,667 @@ setInterval(() => {
     updateXmbAutoContrast();
   }
 }, 2000);
+
+// =========================================================
+// ROLE-DRIVEN USERNAME EFFECTS & CODE-LOCKED EXCLUSIVE ROLES
+// =========================================================
+const LOCKED_ROLES = {
+  joshua: {
+    key: 'joshua',
+    tier: 'special-joshua',
+    label: '✦ JOSHUA',
+    code: '946',
+    color: '#facc15',
+    img: './assets/profile-fx/animated/crown.webp',
+    namePattern: /\bjosh(ua)?\b/i
+  },
+  ruben: {
+    key: 'ruben',
+    tier: 'special-ruben',
+    label: '✦ RUBEN',
+    code: '872',
+    color: '#f43f5e',
+    img: './assets/profile-fx/animated/fire.webp',
+    namePattern: /\bruben\b/i
+  }
+};
+
+function findLockedRoleKey(name, tier) {
+  const n = String(name || '');
+  const t = String(tier || '');
+  for (const def of Object.values(LOCKED_ROLES)) {
+    if (t === def.tier || def.namePattern.test(n)) return def.key;
+  }
+  return null;
+}
+
+function isRoleUnlocked(key) {
+  const k = String(key || '').toLowerCase();
+  if (!k) return true;
+  const globalList = Array.isArray(state.unlockedRoles) ? state.unlockedRoles : [];
+  const profList = Array.isArray(activeProfile()?.unlockedRoles) ? activeProfile().unlockedRoles : [];
+  return globalList.includes(k) || profList.includes(k);
+}
+
+async function grantPermanentRoleUnlock(key) {
+  const k = String(key || '').toLowerCase();
+  if (!k) return;
+  if (!Array.isArray(state.unlockedRoles)) state.unlockedRoles = [];
+  if (!state.unlockedRoles.includes(k)) state.unlockedRoles.push(k);
+  const prof = activeProfile();
+  if (prof) {
+    if (!Array.isArray(prof.unlockedRoles)) prof.unlockedRoles = [];
+    if (!prof.unlockedRoles.includes(k)) prof.unlockedRoles.push(k);
+  }
+  await persist();
+  syncLockedRoleButtons();
+}
+
+function syncLockedRoleButtons() {
+  document.querySelectorAll('[data-lock-badge]').forEach((badge) => {
+    const key = badge.dataset.lockBadge;
+    const unlocked = isRoleUnlocked(key);
+    badge.textContent = unlocked ? '✓' : '🔒';
+    badge.classList.toggle('unlocked', unlocked);
+    badge.title = unlocked ? 'Permanently Unlocked' : 'Code Required';
+  });
+}
+
+let pendingRoleUnlock = null;
+function openRoleUnlockModal(lockDef, onUnlocked) {
+  const modal = document.getElementById('roleCodeModal');
+  const titleEl = document.getElementById('roleCodeModalTitle');
+  const descEl = document.getElementById('roleCodeModalDesc');
+  const imgEl = document.getElementById('roleCodeModalImg');
+  const inputEl = document.getElementById('roleCodeInput');
+  const errEl = document.getElementById('roleCodeError');
+  if (!modal || !inputEl) return;
+
+  pendingRoleUnlock = { lockDef, onUnlocked };
+  if (titleEl) titleEl.textContent = `Unlock ${lockDef.label} Role`;
+  if (descEl) descEl.textContent = `"${lockDef.label}" is name-locked. Enter the secret access code to unlock it permanently across all future updates.`;
+  if (imgEl && lockDef.img) imgEl.src = lockDef.img;
+  if (errEl) errEl.classList.add('hidden');
+  inputEl.value = '';
+  modal.classList.remove('hidden');
+  setTimeout(() => inputEl.focus(), 40);
+}
+
+function closeRoleUnlockModal() {
+  const modal = document.getElementById('roleCodeModal');
+  if (modal) modal.classList.add('hidden');
+  pendingRoleUnlock = null;
+}
+
+document.getElementById('btnRoleCodeClose')?.addEventListener('click', closeRoleUnlockModal);
+document.getElementById('btnRoleCodeCancel')?.addEventListener('click', closeRoleUnlockModal);
+document.getElementById('roleCodeModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'roleCodeModal') closeRoleUnlockModal();
+});
+document.getElementById('roleCodeForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!pendingRoleUnlock) return;
+  const inputEl = document.getElementById('roleCodeInput');
+  const errEl = document.getElementById('roleCodeError');
+  const entered = String(inputEl?.value || '').trim();
+  const { lockDef, onUnlocked } = pendingRoleUnlock;
+
+  if (entered !== lockDef.code) {
+    obsidianSfx.play('error');
+    if (errEl) {
+      errEl.textContent = `Incorrect code for ${lockDef.label}. Access denied.`;
+      errEl.classList.remove('hidden');
+    }
+    if (inputEl) {
+      inputEl.value = '';
+      inputEl.focus();
+    }
+    return;
+  }
+
+  obsidianSfx.play('unlock');
+  await grantPermanentRoleUnlock(lockDef.key);
+  closeRoleUnlockModal();
+  showToast(`🔓 ${lockDef.label} permanently unlocked! Saved across all future updates.`);
+  if (typeof onUnlocked === 'function') {
+    await onUnlocked();
+  }
+});
+
+const NAME_FX_CLASSES = ['name-fx-joshua', 'name-fx-ruben', 'name-fx-viera', 'name-fx-mythic', 'name-fx-super', 'name-fx-custom', 'name-fx-glitch', 'name-fx-rainbow', 'name-fx-neonpulse'];
+const ROLE_NAME_PRIORITY = {
+  'special-joshua': 6,
+  'special-ruben': 5,
+  'dev-viera': 4,
+  mythic: 3,
+  super: 2,
+  standard: 1
+};
+
+function applyRoleNameStyle(el, profile) {
+  if (!el) return;
+  el.classList.remove(...NAME_FX_CLASSES);
+  el.style.removeProperty('--role-name-color');
+  const roles = Array.isArray(profile?.roles) ? profile.roles : [];
+  if (!roles.length) return;
+
+  // Pick highest-tier equipped role (ties favor most recently added role)
+  let topRole = null;
+  let topScore = -1;
+  roles.forEach((r) => {
+    const score = (r?.nameFx ? 3.5 : 0) + (ROLE_NAME_PRIORITY[r?.tier] || 1);
+    if (score >= topScore) {
+      topScore = score;
+      topRole = r;
+    }
+  });
+  if (!topRole) return;
+
+  const tier = topRole.tier || 'standard';
+  const color = topRole.color || '#38bdf8';
+  const fx = String(topRole.nameFx || '').toLowerCase();
+  el.style.setProperty('--role-name-color', color);
+
+  if (fx && ['joshua', 'ruben', 'viera', 'mythic', 'super', 'glitch', 'rainbow', 'neonpulse'].includes(fx)) {
+    el.classList.add(`name-fx-${fx}`);
+  } else if (tier === 'special-joshua' || /\bjosh(ua)?\b/i.test(topRole.name || '')) {
+    el.classList.add('name-fx-joshua');
+  } else if (tier === 'special-ruben' || /\bruben\b/i.test(topRole.name || '')) {
+    el.classList.add('name-fx-ruben');
+  } else if (tier === 'dev-viera' || /\bviera\b/i.test(topRole.name || '')) {
+    el.classList.add('name-fx-viera');
+  } else if (tier === 'mythic') {
+    el.classList.add('name-fx-mythic');
+  } else if (tier === 'super') {
+    el.classList.add('name-fx-super');
+  } else {
+    el.classList.add('name-fx-custom');
+  }
+}
+
+// =========================================================
+// v0.4.0 MEGA FEATURES: ASSET VAULT (697+), ORBIT v2 LIGHTBOX
+// & BEAT FX, FRIEND PASSPORT, PLAYTIME, LAUNCH CINEMATIC,
+// ZERO BROKEN IMAGES & UNIVERSAL GAMEPAD NAVIGATION
+// =========================================================
+const FALLBACK_DISC_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><defs><radialGradient id="g" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="55%" stop-color="#4f46e5"/><stop offset="100%" stop-color="#0f172a"/></radialGradient></defs><rect width="120" height="120" rx="20" fill="url(#g)"/><circle cx="60" cy="60" r="38" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="5"/><circle cx="60" cy="60" r="12" fill="#090d18" stroke="rgba(255,255,255,0.75)" stroke-width="3"/></svg>'
+)}`;
+
+let orbitLightboxIdx = 0;
+function openOrbitBubbleLightbox(bubbleId) {
+  const modal = document.getElementById('orbitBubbleLightbox');
+  const bubbles = (activeSettings().orbitBubbles || []).filter((b) => b && b.url);
+  if (!modal || !bubbles.length) return;
+  const found = bubbles.findIndex((b) => b.id === bubbleId);
+  orbitLightboxIdx = found >= 0 ? found : 0;
+  renderOrbitLightboxSlide();
+  modal.classList.remove('hidden');
+  obsidianSfx.play('open');
+}
+
+function renderOrbitLightboxSlide() {
+  const bubbles = (activeSettings().orbitBubbles || []).filter((b) => b && b.url);
+  const host = document.getElementById('orbitLightboxMediaHost');
+  const label = document.getElementById('orbitLightboxLabel');
+  const modal = document.getElementById('orbitBubbleLightbox');
+  if (!bubbles.length) {
+    modal?.classList.add('hidden');
+    return;
+  }
+  orbitLightboxIdx = ((orbitLightboxIdx % bubbles.length) + bubbles.length) % bubbles.length;
+  const item = bubbles[orbitLightboxIdx];
+  if (!host) return;
+  host.innerHTML = '';
+  if (item.kind === 'video') {
+    const v = document.createElement('video');
+    v.src = item.url;
+    v.controls = true;
+    v.autoplay = true;
+    v.loop = true;
+    host.appendChild(v);
+  } else {
+    const img = document.createElement('img');
+    img.src = item.url;
+    img.alt = '';
+    host.appendChild(img);
+  }
+  if (label) label.textContent = `Orbit 3D Bubble ${orbitLightboxIdx + 1} / ${bubbles.length}`;
+}
+
+let activeFriendPassportHandle = '';
+function openFriendPassport(f) {
+  const modal = document.getElementById('friendPassportModal');
+  if (!modal || !f) return;
+  activeFriendPassportHandle = f.handle || '';
+  const banner = document.getElementById('friendPassportBanner');
+  if (banner) {
+    banner.style.background = f.banner || 'linear-gradient(135deg, #0ea5e9, #6366f1, #ec4899)';
+    banner.style.backgroundSize = 'cover';
+    banner.style.backgroundPosition = 'center';
+  }
+  const avImg = document.getElementById('friendPassportAvatarImg');
+  if (avImg) avImg.src = f.avatar || './assets/maxmb/icons/avatars/firmware/000.png';
+  const decoImg = document.getElementById('friendPassportDecoImg');
+  if (decoImg) {
+    const d = String(f.avatarDecoration || 'none');
+    if (d.startsWith('url:')) {
+      decoImg.src = d.slice(4);
+      decoImg.classList.remove('hidden');
+    } else {
+      decoImg.classList.add('hidden');
+    }
+  }
+  const dot = document.getElementById('friendPassportStatusDot');
+  if (dot) dot.className = `live-status-dot status-${f.status === 'offline' ? 'invisible' : f.status}`;
+  const nameEl = document.getElementById('friendPassportName');
+  if (nameEl) {
+    nameEl.textContent = f.name || f.handle;
+    applyRoleNameStyle(nameEl, f);
+  }
+  const handleEl = document.getElementById('friendPassportHandle');
+  if (handleEl) handleEl.textContent = f.pronouns ? `${f.handle} • ${f.pronouns}` : f.handle;
+  const actEl = document.getElementById('friendPassportActivity');
+  if (actEl) actEl.textContent = f.status === 'offline' ? 'Offline' : (f.activity || f.customStatus || 'Just browsing');
+  const bioEl = document.getElementById('friendPassportBio');
+  if (bioEl) bioEl.textContent = f.bio || 'GLauncher Player';
+  const rolesEl = document.getElementById('friendPassportRoles');
+  if (rolesEl) {
+    rolesEl.innerHTML = '';
+    (f.roles || []).forEach((r) => {
+      const pill = document.createElement('span');
+      pill.className = `foil-role-emblem role-tier-${r.tier || 'standard'}`;
+      pill.style.borderColor = r.color || '#38bdf8';
+      pill.innerHTML = `<img class="foil-role-anim" src="${getRoleAnimIcon(r)}" alt="" /><span>${r.name}</span>`;
+      rolesEl.appendChild(pill);
+    });
+  }
+  const trEl = document.getElementById('friendPassportTrophies');
+  if (trEl) trEl.textContent = `🏆 ${f.trophyCount || 0} Trophies`;
+  const vcBtn = document.getElementById('btnFriendPassportVc');
+  if (vcBtn) {
+    vcBtn.disabled = f.status === 'offline';
+    vcBtn.textContent = f.inVc ? '🎙 Join Active Voice Chat' : '🎙 Call in Voice Chat';
+  }
+  modal.classList.remove('hidden');
+  obsidianSfx.play('open');
+}
+
+let launchCinTimer = null;
+function playGameLaunchCinematic(game) {
+  const mode = activeSettings().launchCinematic || 'cartoon';
+  if (mode === 'instant') return;
+  const el = document.getElementById('gameLaunchCinematic');
+  const cover = document.getElementById('launchCinCover');
+  const title = document.getElementById('launchCinTitle');
+  const sub = document.getElementById('launchCinSub');
+  if (!el) return;
+  if (cover) cover.src = game?.artwork || FALLBACK_DISC_SVG;
+  if (title) title.textContent = game?.title || 'Launching Game...';
+  if (sub) sub.textContent = mode === 'disc' ? 'SPINNING COLLECTOR DISC' : mode === 'ps3' ? 'PLAYSTATION® MEDIA BOOT' : 'LAUNCHING INTO GAMEPLAY';
+  el.classList.remove('hidden', 'cin-cartoon', 'cin-disc', 'cin-ps3');
+  el.classList.add(`cin-${mode}`);
+  requestAnimationFrame(() => el.classList.add('active'));
+  clearTimeout(launchCinTimer);
+  launchCinTimer = setTimeout(() => {
+    el.classList.remove('active');
+    setTimeout(() => el.classList.add('hidden'), 300);
+  }, 1500);
+}
+
+let orbitAudioCtx = null;
+let orbitAnalyser = null;
+let orbitBeatData = null;
+function startOrbitBeatEngine() {
+  const audioEl = els.xmbAudioPlayerEl;
+  if (!audioEl) return;
+  const ensureGraph = () => {
+    if (orbitAnalyser) {
+      if (orbitAudioCtx?.state === 'suspended') orbitAudioCtx.resume().catch(() => {});
+      return;
+    }
+    try {
+      orbitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = orbitAudioCtx.createMediaElementSource(audioEl);
+      orbitAnalyser = orbitAudioCtx.createAnalyser();
+      orbitAnalyser.fftSize = 128;
+      orbitBeatData = new Uint8Array(orbitAnalyser.frequencyBinCount);
+      src.connect(orbitAnalyser);
+      orbitAnalyser.connect(orbitAudioCtx.destination);
+    } catch {}
+  };
+  audioEl.addEventListener('play', ensureGraph);
+
+  const tick = () => {
+    requestAnimationFrame(tick);
+    if (document.hidden || activeSettings().theme !== 'orbit') return;
+    const reactive = activeSettings().orbitAudioReactive !== false;
+    if (!reactive || !orbitAnalyser || audioEl.paused) {
+      els.orbitBubblesStage?.style.setProperty('--beat-scale', '1');
+      return;
+    }
+    orbitAnalyser.getByteFrequencyData(orbitBeatData);
+    let bass = 0;
+    for (let i = 0; i < 10; i++) bass += orbitBeatData[i];
+    const norm = bass / (10 * 255);
+    const scale = (1 + norm * 0.14).toFixed(3);
+    els.orbitBubblesStage?.style.setProperty('--beat-scale', scale);
+  };
+  requestAnimationFrame(tick);
+}
+
+async function initAssetVault() {
+  const catBar = document.getElementById('vaultCategoryBar');
+  const grid = document.getElementById('vaultDecoGrid');
+  const searchInput = document.getElementById('vaultSearchInput');
+  const countBadge = document.getElementById('vaultCountBadge');
+  if (!catBar || !grid) return;
+
+  let catalog = { categories: [], total: 0 };
+  try {
+    const r = await fetch('./assets/profile-fx/decorations-catalog.json');
+    if (r.ok) catalog = await r.json();
+  } catch {}
+  if (countBadge) countBadge.textContent = String(catalog.total || 697);
+
+  let selectedCat = 'ALL';
+  const allItems = catalog.categories.flatMap((c) => c.items.map((it) => ({ ...it, cat: c.name })));
+
+  const renderGrid = () => {
+    const q = String(searchInput?.value || '').trim().toLowerCase();
+    const list = allItems.filter((it) => {
+      if (selectedCat !== 'ALL' && it.cat !== selectedCat) return false;
+      if (q && !it.name.toLowerCase().includes(q) && !it.cat.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const slice = list.slice(0, 120);
+    grid.innerHTML = '';
+    const curRemote = activeProfile().avatarDecorationRemote || '';
+    slice.forEach((it) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `vault-deco-tile${curRemote === it.url ? ' selected' : ''}`;
+      btn.title = `${it.name} (${it.cat}) — Click to cache offline & equip!`;
+      btn.innerHTML = `
+        <div class="vault-deco-preview">
+          <img class="vault-deco-img" src="${it.url}" loading="lazy" alt="" />
+        </div>
+        <div class="vault-deco-name">${it.name}</div>
+      `;
+      btn.addEventListener('click', async () => {
+        showToast(`Caching "${it.name}" offline...`);
+        const cached = await api.cacheRemoteAsset?.(it.url, 'image');
+        const finalUrl = cached?.ok && cached.url ? cached.url : it.url;
+        activeProfile().avatarDecoration = `url:${finalUrl}`;
+        activeProfile().avatarDecorationRemote = it.url;
+        await persist();
+        renderProfileCardAndHud();
+        renderGrid();
+        obsidianSfx.play('success');
+        showToast(`✨ Equipped "${it.name}" (Saved Offline!)`);
+      });
+      grid.appendChild(btn);
+    });
+    if (list.length > 120) {
+      const more = document.createElement('div');
+      more.className = 'hint-text';
+      more.style.gridColumn = '1 / -1';
+      more.style.textAlign = 'center';
+      more.textContent = `Showing 120 of ${list.length} decorations — pick a category or type a keyword to see more!`;
+      grid.appendChild(more);
+    }
+  };
+
+  catBar.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  allBtn.className = 'vault-cat-pill active';
+  allBtn.textContent = `All (${allItems.length})`;
+  allBtn.addEventListener('click', () => {
+    selectedCat = 'ALL';
+    catBar.querySelectorAll('.vault-cat-pill').forEach((b) => b.classList.toggle('active', b === allBtn));
+    renderGrid();
+  });
+  catBar.appendChild(allBtn);
+
+  catalog.categories.forEach((cat) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'vault-cat-pill';
+    btn.textContent = `${cat.name} (${cat.items.length})`;
+    btn.addEventListener('click', () => {
+      selectedCat = cat.name;
+      catBar.querySelectorAll('.vault-cat-pill').forEach((b) => b.classList.toggle('active', b === btn));
+      renderGrid();
+    });
+    catBar.appendChild(btn);
+  });
+
+  searchInput?.addEventListener('input', renderGrid);
+  renderGrid();
+
+  // Paste any custom URL importer
+  document.getElementById('btnVaultApplyUrl')?.addEventListener('click', async () => {
+    const raw = document.getElementById('vaultCustomUrlInput')?.value.trim();
+    const target = document.getElementById('vaultCustomUrlTarget')?.value || 'deco';
+    if (!raw || !/^https?:\/\//i.test(raw)) {
+      obsidianSfx.play('error');
+      showToast('Paste a valid https:// GIF, WebP, PNG, APNG, or MP4 URL');
+      return;
+    }
+    const isVid = /\.(mp4|webm|mov)(\?|$)/i.test(raw);
+    showToast('Caching animated asset offline...');
+    const res = await api.cacheRemoteAsset?.(raw, isVid ? 'video' : 'image');
+    const localUrl = res?.ok && res.url ? res.url : raw;
+    const prof = activeProfile();
+    if (target === 'deco') {
+      prof.avatarDecoration = `url:${localUrl}`;
+      prof.avatarDecorationRemote = raw;
+    } else if (target === 'banner') {
+      prof.banner = `url("${localUrl}")`;
+    } else if (target === 'effect') {
+      prof.profileEffect = `url:${localUrl}`;
+    } else if (target === 'bubble') {
+      if (!Array.isArray(activeSettings().orbitBubbles)) activeSettings().orbitBubbles = [];
+      activeSettings().orbitBubbles.push({
+        id: `bubble-${Date.now()}`,
+        url: localUrl,
+        kind: isVid ? 'video' : 'image'
+      });
+      renderOrbitBubbles();
+    } else if (target === 'xmb') {
+      activeSettings().xmbWallpaper = localUrl;
+      syncXmbWallpaper();
+    }
+    await persist();
+    renderProfileCardAndHud();
+    obsidianSfx.play('success');
+    showToast('✨ Custom asset cached offline & applied!');
+  });
+}
+
+function startUniversalGamepadNav() {
+  let lastMoveAt = 0;
+  let prevButtons = {};
+  const poll = () => {
+    requestAnimationFrame(poll);
+    if (document.hidden || state.bindingHomeButton) return;
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const pad = Array.from(pads || []).find((p) => p && p.connected);
+    if (!pad) return;
+
+    const now = performance.now();
+    const b = (idx) => Boolean(pad.buttons?.[idx]?.pressed);
+    const edge = (idx) => {
+      const cur = b(idx);
+      const hit = cur && !prevButtons[idx];
+      prevButtons[idx] = cur;
+      return hit;
+    };
+
+    const axX = pad.axes?.[0] || 0;
+    const axY = pad.axes?.[1] || 0;
+    const left = b(14) || axX < -0.55;
+    const right = b(15) || axX > 0.55;
+    const up = b(12) || axY < -0.55;
+    const down = b(13) || axY > 0.55;
+
+    const theme = activeSettings().theme || 'obsidian';
+    if ((left || right || up || down) && now - lastMoveAt > 180) {
+      lastMoveAt = now;
+      const key = left ? 'ArrowLeft' : right ? 'ArrowRight' : up ? 'ArrowUp' : 'ArrowDown';
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    }
+
+    if (edge(0)) { // A / Cross
+      if (!state.drawerOpen) {
+        if (theme === 'xmb' || theme === 'orbit') {
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        } else {
+          const g = activeGames().find((x) => x.id === state.selectedId);
+          if (g) runConsoleLaunch(g, false);
+        }
+      }
+    }
+    if (edge(1)) { // B / Circle
+      const openModal = document.querySelector('.modal-backdrop:not(.hidden)');
+      if (openModal) {
+        openModal.classList.add('hidden');
+        obsidianSfx.play('close');
+      } else if (state.drawerOpen) {
+        closeOptionsDrawer();
+        obsidianSfx.play('close');
+      } else if (theme === 'xmb') {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      }
+    }
+    if (edge(3)) { // Y / Triangle
+      if (state.drawerOpen) closeOptionsDrawer();
+      else openOptionsDrawer('profiles');
+      obsidianSfx.play('open');
+    }
+    if (edge(4) || edge(5)) { // LB / RB
+      const dir = b(5) ? 1 : -1;
+      if (state.drawerOpen) {
+        const tabs = Array.from(document.querySelectorAll('#tab-profiles .pw-nav-btn'));
+        const cur = tabs.findIndex((t) => t.classList.contains('active'));
+        if (tabs.length) tabs[(cur + dir + tabs.length) % tabs.length]?.click();
+      }
+    }
+  };
+  requestAnimationFrame(poll);
+}
+
+function initV040MegaFeatures() {
+  // 1. Global Zero-Broken-Images Fallback Guard (PS3 XMB, Obsidian, Orbit, Avatars)
+  document.addEventListener('error', (ev) => {
+    const img = ev.target;
+    if (!img || img.tagName !== 'IMG' || img.dataset.fallbackApplied === '1') return;
+    img.dataset.fallbackApplied = '1';
+    if (img.className && /avatar|pfp/i.test(img.className)) {
+      img.src = './assets/maxmb/icons/avatars/firmware/000.png';
+    } else {
+      img.src = FALLBACK_DISC_SVG;
+    }
+  }, true);
+
+  // 2. Orbit v2 Style & Beat Toggle Controls
+  const styleSel = document.getElementById('orbitBubbleStyleSelect');
+  const beatBtn = document.getElementById('btnOrbitBeatToggle');
+  if (styleSel) {
+    styleSel.value = activeSettings().orbitBubbleStyle || 'crystal';
+    styleSel.addEventListener('change', async () => {
+      activeSettings().orbitBubbleStyle = styleSel.value;
+      await persist();
+      renderOrbitBubbles();
+      obsidianSfx.play('pop');
+    });
+  }
+  const syncBeatBtn = () => {
+    if (!beatBtn) return;
+    const on = activeSettings().orbitAudioReactive !== false;
+    beatBtn.classList.toggle('active', on);
+    beatBtn.textContent = on ? '🎵 Beat FX: ON' : '🎵 Beat FX: OFF';
+  };
+  syncBeatBtn();
+  beatBtn?.addEventListener('click', async () => {
+    activeSettings().orbitAudioReactive = activeSettings().orbitAudioReactive === false;
+    syncBeatBtn();
+    await persist();
+  });
+
+  // Orbit Lightbox buttons
+  document.getElementById('btnOrbitLightboxClose')?.addEventListener('click', () => {
+    document.getElementById('orbitBubbleLightbox')?.classList.add('hidden');
+  });
+  document.getElementById('orbitBubbleLightbox')?.addEventListener('click', (e) => {
+    if (e.target.id === 'orbitBubbleLightbox') e.currentTarget.classList.add('hidden');
+  });
+  document.getElementById('btnOrbitLbPrev')?.addEventListener('click', () => {
+    orbitLightboxIdx--;
+    renderOrbitLightboxSlide();
+  });
+  document.getElementById('btnOrbitLbNext')?.addEventListener('click', () => {
+    orbitLightboxIdx++;
+    renderOrbitLightboxSlide();
+  });
+  document.getElementById('btnOrbitLbDelete')?.addEventListener('click', async () => {
+    const bubbles = (activeSettings().orbitBubbles || []).filter((b) => b && b.url);
+    const cur = bubbles[orbitLightboxIdx];
+    if (!cur) return;
+    activeSettings().orbitBubbles = (activeSettings().orbitBubbles || []).filter((b) => b.id !== cur.id);
+    await persist();
+    renderOrbitBubbles();
+    renderOrbitLightboxSlide();
+  });
+
+  // 3. Friend Passport Modal controls
+  document.getElementById('btnFriendPassportClose')?.addEventListener('click', () => {
+    document.getElementById('friendPassportModal')?.classList.add('hidden');
+  });
+  document.getElementById('friendPassportModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'friendPassportModal') e.currentTarget.classList.add('hidden');
+  });
+  document.getElementById('btnFriendPassportVc')?.addEventListener('click', () => {
+    if (!activeFriendPassportHandle) return;
+    socialClient?.callFriend(activeFriendPassportHandle);
+    document.getElementById('friendPassportModal')?.classList.add('hidden');
+    showToast(`Joining Voice Chat with ${activeFriendPassportHandle}...`);
+  });
+
+  // 4. Obsidian UI Sounds & Launch Cinematic Settings
+  const obsSfxCheck = document.getElementById('settingObsidianSounds');
+  if (obsSfxCheck) {
+    obsSfxCheck.checked = activeSettings().obsidianSounds !== false;
+    obsSfxCheck.addEventListener('change', async () => {
+      activeSettings().obsidianSounds = obsSfxCheck.checked;
+      obsidianSfx.enabled = obsSfxCheck.checked;
+      await persist();
+    });
+  }
+  const cinSel = document.getElementById('settingLaunchCinematic');
+  if (cinSel) {
+    cinSel.value = activeSettings().launchCinematic || 'cartoon';
+    cinSel.addEventListener('change', async () => {
+      activeSettings().launchCinematic = cinSel.value;
+      await persist();
+      showToast(`Game Launch Cinematic: ${cinSel.options[cinSel.selectedIndex]?.text}`);
+    });
+  }
+
+  // 5. Real Playtime Tracker Listener
+  api.onPlaytimeRecorded?.(async ({ title, target, elapsedSeconds }) => {
+    if (!elapsedSeconds || elapsedSeconds < 2) return;
+    const g = activeGames().find((x) => (target && x.executable === target) || (title && x.title === title));
+    if (g) {
+      g.playtimeSeconds = (Number(g.playtimeSeconds) || 0) + elapsedSeconds;
+      await persist();
+      renderDiscordLivePreview();
+    }
+  });
+
+  // 6. Initialize Asset Vault (697+), Beat Engine & Universal Gamepad Navigation
+  initAssetVault();
+  startOrbitBeatEngine();
+  startUniversalGamepadNav();
+}

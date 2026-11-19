@@ -1,16 +1,20 @@
 {
-  "version": "0.3.1",
-  "title": "GLauncher v0.3.1 — Holographic Gamer Passport, 3D Profile FX & PS3 Auto-Contrast",
-  "downloadUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.3.1/GLauncher-Setup-0.3.1.exe",
+  "version": "0.4.0",
+  "title": "GLauncher v0.4.0 — Asset Vault (697+ Decorations), Orbit v2, Obsidian SFX & Cartoon Polish",
+  "asarUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.4.0/app.asar",
+  "downloadUrl": "https://github.com/lostfaithxenia/GLauncher-Alpha/releases/download/v0.4.0/GLauncher-Setup-0.4.0.exe",
   "notes": [
-    "NEW Original Profile Studio: Holographic Gamer Passport — full-width showcase card on top + clean horizontal pill tabs + spacious 2-column dock (zero squished layouts or endless scrolling)",
-    "Real 3D WebGL Profile Effects (Three.js mouse-parallax 3D orbs, cosmic torus rings, faceted crystals, tumbling petals, embers & plasma rings) + live spinning 3D iridescent Collector Disc",
-    "12 Studio Animated WebP Profile & Role Assets bundled locally for crisp, living motion",
-    "Revamped 3D Foil Collector Roles with metallic sheen sweeps & animated icons (⚡ VIERA • DEV, 👑✦ JOSHUA, 🔥✦ RUBEN, FOUNDER, STREAMER, VIP)",
-    "PS3 XMB Auto-Contrast Text: automatically detects white/bright wallpapers & wave colors and flips XMB text/icons to black (and white on dark backgrounds)"
+    "NEW In-App Asset Vault (697+ Animated Avatar Decorations across 68 categories from discord-decoration.art) + Paste ANY GIF/WebP/PNG/MP4 URL — automatically cached offline forever!",
+    "Buttery Cartoonish Discord-Style Spring Revamp: bouncy overshoot physics, tactile click squish, glossy surfaces & 14 crisp CC0 Obsidian & Orbit UI Sound Effects!",
+    "Role-Driven Animated Username Colors & Effects + Custom Role Name FX Picker (Liquid Gold, Molten Flame, Cyber Electric, Prismatic Holo, Glitch Neon, Rainbow Wave, Neon Pulse)",
+    "Name-Locked & Code-Locked VIP Roles (✦ JOSHUA & ✦ RUBEN) — permanently saved across all future updates once unlocked!",
+    "Orbit 3D Bubbles v2: Audio-Reactive Music Beat Pulse, Clickable Fullscreen Cinema Lightbox & 4 Bubble Styles (Crystal Glass, Neon Hologram, Frosted Prism, Iridescent Soap)",
+    "Live Friends Holographic Passport Peek + Real Role Colors & Animations synced to Friends List & In-Game Voice Chat HUD",
+    "Real Per-Game Playtime Tracker & Most-Played Showcase + Customizable Game Launch Cinematics (Cartoon Pop, 3D Disc Spin, PS3 Gloss)",
+    "1-Click Automatic Live Patcher (downloads 22 MB app.asar directly in-app and relaunches in seconds!) + Universal Xbox/PS Controller Navigation"
   ],
   "fixes": [
-    "Fixed squished Profile customization tab inside full-screen options drawer",
-    "Fixed plain black/white transition screen when exiting a game without the Home button panel"
+    "Fixed all broken image squares on PS3 XMB, Obsidian, Orbit & Avatars with automatic glowing disc/avatar fallbacks",
+    "Fixed role persistence when clearing all roles and preserved unlocked secret roles permanently across every update"
   ]
 }
