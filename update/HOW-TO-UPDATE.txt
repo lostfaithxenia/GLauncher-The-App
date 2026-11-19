@@ -1,31 +1,32 @@
 ====================================================================
-              GLauncher v0.2.0 - Safe Update Package
+            GLauncher v0.3.0 - Orbit Update (Safe Update)
 ====================================================================
 
-YOUR CUSTOMIZATION IS 100% SAFE!
---------------------------------------------------------------------
-Updating to v0.2.0 will NOT remove or reset:
-  * Your profile, display name, @handle, bio, banners, or roles
-  * Your added games, covers, or playtime stats
-  * Your ps3_pic, ps3_video, and ps3_audio custom media folders
+ALL YOUR CUSTOMIZATION IS 100% SAFE!
+Profiles, @handles, games, banners, roles, and ps3_pic/video/audio
+are never deleted when updating.
 
-WHICH FILE TO RUN:
+2 EASY WAYS TO UPDATE ANY PREVIOUSLY INSTALLED GLAUNCHER:
 --------------------------------------------------------------------
-1. If you installed GLauncher with the Setup installer:
-   -> Close GLauncher, then run "GLauncher-Update-Setup-0.2.0.exe".
-      It updates the app in-place while keeping all your data.
+OPTION 1 (Fastest — 2-Second Drag & Drop):
+  - Copy "app.asar" into your GLauncher\resources\ folder
+    (OR double-click "Drop-In-Update-v0.3.0.bat" to auto-apply it!).
+  - From v0.3.0 onward, you can also drag & drop future app.asar or
+    GLauncher update files directly onto the GLauncher window!
 
-2. If you run GLauncher as a Portable .exe:
-   -> Close GLauncher, and replace your old GLauncher .exe with
-      "GLauncher-Update-Portable-0.2.0.exe" in the same folder.
+OPTION 2 (Standard Installer):
+  - Close GLauncher and run "GLauncher-Setup-0.3.0.exe".
 
-WHAT'S NEW IN v0.2.0:
+WHAT'S NEW IN v0.3.0:
 --------------------------------------------------------------------
-  * Discord-style Profiles, @handles, custom banners & role presets
-  * Online Friends & Rich Presence ("Playing <Game>" / "Just browsing")
-  * WebRTC Voice Chat + translucent in-game overlay with green rings
-  * Fixed Obsidian white background & native dropdown flashes
-  * Revamped Music Player on both Obsidian and PS3 XMB
-  * Minecraft Launcher, Minecraft & TLauncher auto-detection
-  * App-wide startup animation & persistent theme across boots
+  * NEW Theme: Orbit 3D Bubbles — PS3-style dropdown list + floating
+    3D glass spheres that hold your Pictures, GIFs & looping Videos!
+  * Exclusive Special Roles:
+      - ⚡ Viera • DEV
+      - 👑✦ Joshua (Super Special)
+      - 🔥✦ Ruben (Super Special)
+  * 12 real 60fps Canvas animated Profile Effects + 9 animated SVG
+    Avatar Decorations + Upload Custom GIF/APNG/SVG support
+  * Real per-game trophy detection (Steam & Minecraft Advancements)
+    with live in-game trophy popups
 ====================================================================
