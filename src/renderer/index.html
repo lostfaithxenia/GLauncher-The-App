@@ -647,19 +647,29 @@
             </div>
           </section>
 
-          <!-- TAB 3: PROFILES, SUPER ROLES, GLOWING VFX & PS3 XMB CUSTOMIZATION -->
-          <section id="tab-profiles" class="tab-panel hidden">
-            <div class="panel-group">
-              <div class="group-label">Switch or Manage Profiles</div>
-              <div id="profileList" class="profile-list"></div>
-            </div>
+          <!-- TAB 3: 100% REVAMPED ZERO-SCROLL DISCORD PROFILE WORKBENCH -->
+          <section id="tab-profiles" class="tab-panel hidden profile-workbench-tab">
+            <div class="profile-workbench">
+              <!-- COL 1: Discord-Style Left Category Sidebar -->
+              <aside class="pw-sidebar" aria-label="Profile Studio Sections">
+                <div class="pw-side-heading">USER SETTINGS</div>
+                <button type="button" class="pw-nav-btn active" data-pw="identity">🪪 User Profile</button>
+                <button type="button" class="pw-nav-btn" data-pw="appearance">🎨 Avatar &amp; Colors</button>
+                <button type="button" class="pw-nav-btn" data-pw="effects">✨ Effects &amp; Frames</button>
+                <button type="button" class="pw-nav-btn" data-pw="roles">👑 Special Roles</button>
+                <div class="pw-side-divider"></div>
+                <div class="pw-side-heading">APP &amp; THEMES</div>
+                <button type="button" class="pw-nav-btn" data-pw="themes">🎮 Themes &amp; PS3</button>
+                <button type="button" class="pw-nav-btn" data-pw="accounts">👥 Switch Profile</button>
+              </aside>
 
-            <div class="panel-group">
-              <div class="group-label">Discord-Style Profile Studio, Effects &amp; Color Swatches</div>
+              <!-- COL 2: Focused Sub-Pane (No Endless Scrolling!) -->
+              <div class="pw-center">
+                <!-- PANE 1: USER PROFILE IDENTITY -->
+                <div class="pw-pane" data-pw-pane="identity">
+                  <h3 class="pw-pane-title">User Profile</h3>
+                  <p class="pw-pane-sub">Customize how you look across Obsidian, Orbit, PS3 XMB &amp; Online Friends.</p>
 
-              <div class="discord-studio-grid">
-                <!-- LEFT: Controls, Swatches, Profile Effects & Avatar Decorations -->
-                <div class="discord-studio-controls">
                   <div class="split-2">
                     <div class="form-field">
                       <label for="profileDisplayNameInput">Display Name</label>
@@ -669,30 +679,6 @@
                       <label for="profilePronounsInput">Pronouns / Subtag</label>
                       <input id="profilePronounsInput" type="text" class="text-input" maxlength="24" placeholder="e.g. he/him, they/them" />
                     </div>
-                  </div>
-
-                  <div class="form-field">
-                    <label>Avatar / PFP (PNG, GIF, Gradient or PSN)</label>
-                    <div class="pfp-editor-row">
-                      <div id="activePfpPreviewWrap" class="pfp-preview-lg pfp-frame-neon">
-                        <img id="activePfpPreviewImg" class="pfp-img hidden" alt="" />
-                        <span id="activePfpPreviewFallback" class="pfp-fallback">P</span>
-                      </div>
-                      <div class="pfp-btn-stack">
-                        <button type="button" id="btnPickPfp" class="btn-secondary btn-sm">Upload PNG / GIF…</button>
-                        <button type="button" id="btnOpenAvatarGallery" class="btn-primary btn-sm">Avatar Gallery</button>
-                        <button type="button" id="btnClearPfp" class="btn-secondary btn-xs">Reset Avatar</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div id="avatarGalleryBox" class="avatar-gallery-box hidden">
-                    <div class="avatar-gallery-tabs">
-                      <button type="button" class="av-tab active" data-avtab="gradient">Gradient Icons</button>
-                      <button type="button" class="av-tab" data-avtab="firmware">PS3 Firmware (4.93)</button>
-                      <button type="button" class="av-tab" data-avtab="psn">MaXMB PSN Avatars</button>
-                    </div>
-                    <div id="avatarGalleryGrid" class="avatar-gallery-grid"></div>
                   </div>
 
                   <div class="split-2">
@@ -712,7 +698,47 @@
                   </div>
 
                   <div class="form-field">
-                    <label for="profileBannerPreset">Banner (Gradient or Upload Image/GIF)</label>
+                    <label for="profileCustomStatusInput">Thought-Bubble Custom Status</label>
+                    <input id="profileCustomStatusInput" type="text" class="text-input" maxlength="70" placeholder="wasn't me that threw that last match.. i swear..." />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="profileBioInput">About Me</label>
+                    <textarea id="profileBioInput" rows="3" class="text-area" maxlength="220" placeholder="Write your profile bio..."></textarea>
+                  </div>
+                </div>
+
+                <!-- PANE 2: AVATAR, BANNER & CIRCULAR COLOR SWATCHES -->
+                <div class="pw-pane hidden" data-pw-pane="appearance">
+                  <h3 class="pw-pane-title">Avatar, Banner &amp; Color Theme</h3>
+                  <p class="pw-pane-sub">Pick a circular gradient theme orb or upload your own PNG/GIF avatar &amp; banner.</p>
+
+                  <div class="form-field">
+                    <label>Avatar / PFP</label>
+                    <div class="pfp-editor-row">
+                      <div id="activePfpPreviewWrap" class="pfp-preview-lg pfp-frame-neon">
+                        <img id="activePfpPreviewImg" class="pfp-img hidden" alt="" />
+                        <span id="activePfpPreviewFallback" class="pfp-fallback">P</span>
+                      </div>
+                      <div class="pfp-btn-stack">
+                        <button type="button" id="btnPickPfp" class="btn-secondary btn-sm">Upload PNG / GIF…</button>
+                        <button type="button" id="btnOpenAvatarGallery" class="btn-primary btn-sm">Avatar Gallery</button>
+                        <button type="button" id="btnClearPfp" class="btn-secondary btn-xs">Reset</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="avatarGalleryBox" class="avatar-gallery-box hidden">
+                    <div class="avatar-gallery-tabs">
+                      <button type="button" class="av-tab active" data-avtab="gradient">Gradient</button>
+                      <button type="button" class="av-tab" data-avtab="firmware">PS3 (4.93)</button>
+                      <button type="button" class="av-tab" data-avtab="psn">PSN Avatars</button>
+                    </div>
+                    <div id="avatarGalleryGrid" class="avatar-gallery-grid"></div>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="profileBannerPreset">Profile Banner (Gradient or Custom Image/GIF)</label>
                     <div class="input-with-btn">
                       <select id="profileBannerPreset" class="select-input">
                         <option value="linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%)">Prismatic Cyberpunk</option>
@@ -727,9 +753,8 @@
                     </div>
                   </div>
 
-                  <!-- Discord Appearance Circular Color Swatches -->
                   <div class="form-field">
-                    <label>Profile Theme Color Swatches (Click to apply instantly)</label>
+                    <label>Color Swatches (Click to apply instantly)</label>
                     <div id="profileColorSwatchGrid" class="color-swatch-grid"></div>
                     <div class="split-2" style="margin-top:8px;">
                       <div>
@@ -742,335 +767,306 @@
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <!-- Add Profile Effect Visual Grid -->
+                <!-- PANE 3: PROFILE EFFECTS & AVATAR DECORATIONS -->
+                <div class="pw-pane hidden" data-pw-pane="effects">
+                  <h3 class="pw-pane-title">Profile Effects &amp; Avatar Decorations</h3>
+                  <p class="pw-pane-sub">60fps live animated overlays &amp; SVG frames — or upload any free GIF/APNG/SVG!</p>
+
                   <div class="form-field">
                     <div class="group-header-row" style="margin-bottom:4px;">
-                      <label style="margin:0;">Profile Effect (60fps Animated Overlay)</label>
+                      <label style="margin:0;">Animated Profile Effects</label>
                       <button type="button" id="btnUploadCustomEffect" class="btn-link">+ Upload GIF / APNG / SVG</button>
                     </div>
                     <div id="profileEffectsGrid" class="effect-picker-grid"></div>
                   </div>
 
-                  <!-- Avatar Decorations Visual Grid -->
                   <div class="form-field">
                     <div class="group-header-row" style="margin-bottom:4px;">
-                      <label style="margin:0;">Avatar Decoration (Animated SVG Frame)</label>
+                      <label style="margin:0;">Avatar Decorations</label>
                       <button type="button" id="btnUploadCustomDeco" class="btn-link">+ Upload GIF / PNG / SVG</button>
                     </div>
                     <div id="avatarDecoGrid" class="deco-picker-grid"></div>
                   </div>
 
-                  <div class="form-field">
-                    <label for="profileVfxSelect">Corner Pill VFX Glow</label>
-                    <select id="profileVfxSelect" class="select-input">
-                      <option value="prismatic">✦ Prismatic Pulse Aura</option>
-                      <option value="neon">⚡ Cyber Neon Pulse</option>
-                      <option value="void">🔥 Obsidian Void Flame</option>
-                      <option value="holo">🌈 Holographic Shimmer</option>
-                      <option value="gold">🏆 PS3 Platinum Gold</option>
-                      <option value="none">Minimal (No VFX)</option>
-                    </select>
+                  <div class="split-2">
+                    <div class="form-field">
+                      <label for="profileVfxSelect">Corner Pill VFX</label>
+                      <select id="profileVfxSelect" class="select-input">
+                        <option value="prismatic">✦ Prismatic Pulse</option>
+                        <option value="neon">⚡ Cyber Neon</option>
+                        <option value="void">🔥 Void Flame</option>
+                        <option value="holo">🌈 Holo Shimmer</option>
+                        <option value="gold">🏆 Platinum Gold</option>
+                        <option value="none">Minimal</option>
+                      </select>
+                    </div>
+                    <div class="form-field">
+                      <label for="settingPfpFrame">PFP Ring Style</label>
+                      <select id="settingPfpFrame" class="select-input">
+                        <option value="dev-sparkle">✦ Dev Sparkle Crown</option>
+                        <option value="neon">Neon Glow</option>
+                        <option value="holo">Holographic</option>
+                        <option value="gold">Gold Trim</option>
+                        <option value="minimal">Minimal</option>
+                      </select>
+                    </div>
                   </div>
+                </div>
+
+                <!-- PANE 4: SPECIAL ROLES (VIERA DEV, JOSHUA, RUBEN & CUSTOM) -->
+                <div class="pw-pane hidden" data-pw-pane="roles">
+                  <h3 class="pw-pane-title">Special Roles &amp; Badges</h3>
+                  <p class="pw-pane-sub">Equip exclusive animated roles or craft your own custom roles.</p>
 
                   <div class="form-field">
-                    <label for="profileCustomStatusInput">Thought-Bubble Custom Status</label>
-                    <input id="profileCustomStatusInput" type="text" class="text-input" maxlength="70" placeholder="wasn't me that threw that last match.. i swear..." />
-                  </div>
-
-                  <div class="form-field">
-                    <label for="profileBioInput">About Me</label>
-                    <textarea id="profileBioInput" rows="2" class="text-area" maxlength="220" placeholder="Write your profile bio..."></textarea>
-                  </div>
-
-                  <div class="form-field">
-                    <label>Roles (Click × to remove)</label>
+                    <label>Active Roles (Click × to remove)</label>
                     <div id="profileRolesEditorList" class="profile-roles-wrap"></div>
-                    <div class="role-creator-row" style="margin-top:6px;">
-                      <input id="newRoleIconInput" type="text" class="text-input" maxlength="4" placeholder="⚡" style="max-width:54px; text-align:center;" />
-                      <input id="newRoleNameInput" type="text" class="text-input" maxlength="22" placeholder="Role name (e.g. Speedrunner)" />
-                      <select id="newRoleTierSelect" class="select-input" style="max-width:165px;">
-                        <option value="standard">Standard Role</option>
-                        <option value="super">✦ Super Role</option>
-                        <option value="mythic">🔥 Mythic Role</option>
-                        <option value="dev-viera">⚡ Viera DEV Tier</option>
-                        <option value="special-joshua">👑 Joshua Super Special</option>
-                        <option value="special-ruben">🔥 Ruben Super Special</option>
+                  </div>
+
+                  <div class="form-field">
+                    <label>Exclusive 1-Click Special Roles</label>
+                    <div class="special-role-cards-grid">
+                      <button type="button" class="special-role-card role-tier-dev-viera quick-role-preset" data-rname="Viera • DEV" data-ricon="⚡" data-rcolor="#22d3ee" data-rtier="dev-viera">⚡ Viera • DEV</button>
+                      <button type="button" class="special-role-card role-tier-special-joshua quick-role-preset" data-rname="Joshua" data-ricon="👑✦" data-rcolor="#facc15" data-rtier="special-joshua">👑✦ Joshua (Special)</button>
+                      <button type="button" class="special-role-card role-tier-special-ruben quick-role-preset" data-rname="Ruben" data-ricon="🔥✦" data-rcolor="#f43f5e" data-rtier="special-ruben">🔥✦ Ruben (Special)</button>
+                      <button type="button" class="special-role-card quick-role-preset" data-rname="Founder" data-ricon="★" data-rcolor="#facc15" data-rtier="mythic">★ Founder</button>
+                      <button type="button" class="special-role-card quick-role-preset" data-rname="Streamer" data-ricon="🎙️" data-rcolor="#a855f7" data-rtier="super">🎙️ Streamer</button>
+                      <button type="button" class="special-role-card quick-role-preset" data-rname="VIP" data-ricon="💎" data-rcolor="#ec4899" data-rtier="mythic">💎 VIP</button>
+                    </div>
+                  </div>
+
+                  <div class="form-field">
+                    <label>Create Custom Role</label>
+                    <div class="role-creator-row">
+                      <input id="newRoleIconInput" type="text" class="text-input" maxlength="4" placeholder="⚡" style="max-width:52px; text-align:center;" />
+                      <input id="newRoleNameInput" type="text" class="text-input" maxlength="22" placeholder="Role name..." />
+                      <select id="newRoleTierSelect" class="select-input" style="max-width:155px;">
+                        <option value="standard">Standard</option>
+                        <option value="super">✦ Super</option>
+                        <option value="mythic">🔥 Mythic</option>
+                        <option value="dev-viera">⚡ Viera DEV</option>
+                        <option value="special-joshua">👑 Joshua Special</option>
+                        <option value="special-ruben">🔥 Ruben Special</option>
                       </select>
                       <input id="newRoleColorInput" type="color" value="#38bdf8" class="color-picker color-picker-inline" />
                       <button type="button" id="btnAddProfileRole" class="btn-primary btn-sm">+ Add</button>
                     </div>
-                    <div class="quick-exe-row" style="margin-top:6px; flex-wrap:wrap;">
-                      <button type="button" class="btn-link quick-role-preset" data-rname="Viera • DEV" data-ricon="⚡" data-rcolor="#22d3ee" data-rtier="dev-viera">+ ⚡ Viera (DEV)</button>
-                      <button type="button" class="btn-link quick-role-preset" data-rname="Joshua" data-ricon="👑✦" data-rcolor="#facc15" data-rtier="special-joshua">+ 👑✦ Joshua (Special)</button>
-                      <button type="button" class="btn-link quick-role-preset" data-rname="Ruben" data-ricon="🔥✦" data-rcolor="#f43f5e" data-rtier="special-ruben">+ 🔥✦ Ruben (Special)</button>
-                      <button type="button" class="btn-link quick-role-preset" data-rname="Founder" data-ricon="★" data-rcolor="#facc15" data-rtier="mythic">+ ★ Founder</button>
-                      <button type="button" class="btn-link quick-role-preset" data-rname="Streamer" data-ricon="🎙️" data-rcolor="#a855f7" data-rtier="super">+ 🎙️ Streamer</button>
-                      <button type="button" class="btn-link quick-role-preset" data-rname="VIP" data-ricon="💎" data-rcolor="#ec4899" data-rtier="mythic">+ 💎 VIP</button>
-                    </div>
                   </div>
                 </div>
 
-                <!-- RIGHT: Sticky Live Discord Profile Card Preview -->
-                <div class="discord-studio-preview-col">
-                  <div class="preview-label-eyebrow">LIVE PROFILE PREVIEW</div>
-                  <div id="discordLiveCard" class="discord-live-card">
-                    <div id="discordLiveEffectLayer" class="discord-effect-layer effect-none" aria-hidden="true"></div>
-                    <div id="discordLiveBanner" class="discord-live-banner">
-                      <span class="discord-edit-pill">✎ Customizing</span>
+                <!-- PANE 5: THEMES, PS3 XMB & UPDATES -->
+                <div class="pw-pane hidden" data-pw-pane="themes">
+                  <h3 class="pw-pane-title">Themes, PS3 XMB &amp; Live Updates</h3>
+                  <div class="split-2">
+                    <div class="form-field">
+                      <label for="settingTheme">Active Theme (Saved on Reboot)</label>
+                      <select id="settingTheme" class="select-input">
+                        <option value="obsidian">Obsidian Glass (3D Disc &amp; Case)</option>
+                        <option value="orbit">Orbit 3D Bubbles (Dropdown + Video/Photo Spheres)</option>
+                        <option value="xmb">PS3 XMB (Firmware 4.93 + MaXMB)</option>
+                        <option value="cyber">Neon Cyber</option>
+                        <option value="walnut">Warm Studio</option>
+                        <option value="arctic">Arctic Slate</option>
+                      </select>
                     </div>
-                    <div class="discord-live-header-row">
-                      <div id="discordLiveAvatarWrap" class="discord-live-avatar-wrap deco-none">
-                        <img id="discordLiveAvatarImg" class="discord-live-avatar-img" src="./assets/maxmb/icons/avatars/firmware/000.png" alt="" />
-                        <img id="discordLiveDecoImg" class="avatar-deco-overlay hidden" alt="" />
-                        <span id="discordLiveStatusDot" class="live-status-dot status-online"></span>
-                      </div>
-                      <div id="discordLiveThoughtBubble" class="discord-thought-bubble">
-                        <span id="discordLiveThoughtText">Just browsing GLauncher…</span>
-                      </div>
+                    <div class="form-field">
+                      <label for="settingBackdropMode">Animated Shader</label>
+                      <select id="settingBackdropMode" class="select-input">
+                        <option value="aurora">Aurora Shader</option>
+                        <option value="silk">React Bits Silk (WebGL)</option>
+                        <option value="iridescence">React Bits Iridescence</option>
+                        <option value="xmb-wave">PS3 lines.qrc Wave</option>
+                        <option value="starfield">Starfield Drift</option>
+                        <option value="cybergrid">Cyber Horizon</option>
+                        <option value="clean">Clean Static</option>
+                      </select>
                     </div>
-                    <div class="discord-live-body">
-                      <div class="discord-live-badges-row">
-                        <span class="dc-badge" title="GLauncher Alpha Pioneer">💿</span>
-                        <span class="dc-badge" title="Profile Customizer">✨</span>
-                        <span class="dc-badge" title="Voice Ready">🎧</span>
-                      </div>
-                      <div id="discordLiveName" class="discord-live-name">Player 1</div>
-                      <div id="discordLiveSubHandle" class="discord-live-subhandle">@player1</div>
+                  </div>
+                  <div class="split-3">
+                    <div class="form-field">
+                      <label for="settingGlassStyle">Glass Material</label>
+                      <select id="settingGlassStyle" class="select-input">
+                        <option value="liquid">Liquid Glass</option>
+                        <option value="carbon">Brushed Carbon</option>
+                        <option value="matte">Minimal Matte</option>
+                      </select>
+                    </div>
+                    <div class="form-field">
+                      <label for="settingGraphicsQuality">3D Quality</label>
+                      <select id="settingGraphicsQuality" class="select-input">
+                        <option value="high">High</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="performance">Max FPS</option>
+                      </select>
+                    </div>
+                    <div class="form-field">
+                      <label for="settingUiAccent">UI Accent</label>
+                      <input id="settingUiAccent" type="color" value="#38bdf8" class="color-picker" />
+                    </div>
+                  </div>
+                  <div class="split-2">
+                    <div class="form-field">
+                      <label for="settingXmbWaveStyle">PS3 Wave Engine</label>
+                      <select id="settingXmbWaveStyle" class="select-input">
+                        <option value="original">Original PS3 (lines.qrc)</option>
+                        <option value="complex">MaXMB Complex</option>
+                      </select>
+                    </div>
+                    <div class="form-field">
+                      <label for="settingXmbBgColor">PS3 Wave Color</label>
+                      <select id="settingXmbBgColor" class="select-input">
+                        <option value="auto">Original (Month)</option>
+                        <option value="blue">Classic Blue</option>
+                        <option value="royal-blue">Royal Blue</option>
+                        <option value="purple">Purple</option>
+                        <option value="red">Red</option>
+                        <option value="pink">Pink</option>
+                        <option value="orange">Orange</option>
+                        <option value="green">Green</option>
+                        <option value="turquoise">Turquoise</option>
+                        <option value="silver">Silver</option>
+                        <option value="black">Black</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="split-2">
+                    <div class="form-field">
+                      <label for="settingXmbIconSet">XMB Icon Pack</label>
+                      <select id="settingXmbIconSet" class="select-input">
+                        <option value="default">PS3 Gloss (4.93)</option>
+                        <option value="flat">MaXMB Flat</option>
+                        <option value="vice">Neon Vice</option>
+                      </select>
+                    </div>
+                    <div class="form-field">
+                      <label for="settingXmbSoundSet">XMB Sound Pack</label>
+                      <select id="settingXmbSoundSet" class="select-input">
+                        <option value="ps3">PS3 Sounds</option>
+                        <option value="ps4">PS4 Sounds</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="split-2">
+                    <div class="form-field">
+                      <label for="psnCardColorInput">PSN Card Color</label>
+                      <input id="psnCardColorInput" type="color" value="#1d4ed8" class="color-picker" />
+                    </div>
+                    <div class="form-field">
+                      <label for="psnCommentInput">PSN Comment</label>
+                      <input id="psnCommentInput" type="text" class="text-input" maxlength="60" placeholder="Welcome to my PS3 XMB!" />
+                    </div>
+                  </div>
+                  <div class="split-2" style="margin-top:4px;">
+                    <label class="check-row"><input id="settingXmbSounds" type="checkbox" checked /><span>XMB Sounds</span></label>
+                    <label class="check-row"><input id="settingXmbIntro" type="checkbox" checked /><span>PS3 Intro</span></label>
+                  </div>
+                  <div class="form-field" style="margin-top:6px;">
+                    <label>Custom XMB Wallpaper (MP4 / Image)</label>
+                    <div class="input-with-btn">
+                      <input id="xmbWallpaperInput" type="text" class="text-input" placeholder="Using Authentic PS3 Wave" readonly />
+                      <button type="button" id="btnPickXmbWallpaper" class="btn-secondary btn-xs">Pick…</button>
+                      <button type="button" id="btnClearXmbWallpaper" class="btn-secondary btn-xs">Clear</button>
+                      <button type="button" id="btnReplayPs3Intro" class="btn-secondary btn-xs">Replay Intro</button>
+                    </div>
+                  </div>
+                  <div class="form-field" style="margin-top:6px;">
+                    <label for="updateFeedUrlInput">Live Update Feed URL</label>
+                    <div class="input-with-btn">
+                      <input id="updateFeedUrlInput" type="text" class="text-input" placeholder="https://raw.githubusercontent.com/.../update-manifest.json" />
+                      <button type="button" id="btnSaveUpdateFeed" class="btn-secondary btn-xs">Save</button>
+                      <button type="button" id="btnCheckUpdatesNow" class="btn-primary btn-xs">Check Now</button>
+                      <button type="button" id="btnPreviewWhatsNew" class="btn-secondary btn-xs">What's New</button>
+                    </div>
+                    <div id="updateStatusHint" class="hint-text" style="margin-top:4px;">Current Version: v0.3.0</div>
+                  </div>
+                </div>
 
-                      <div class="discord-live-section">
-                        <div class="discord-live-sec-title">ABOUT ME</div>
-                        <div id="discordLiveBio" class="discord-live-bio">Collector of physical discs, PS3 XMB enthusiast &amp; achievement hunter.</div>
-                      </div>
+                <!-- PANE 6: SWITCH / CREATE PROFILES -->
+                <div class="pw-pane hidden" data-pw-pane="accounts">
+                  <h3 class="pw-pane-title">Switch or Create Profiles</h3>
+                  <div id="profileList" class="profile-list" style="margin-bottom:14px;"></div>
+                  <div class="group-label" id="profileFormTitle">Create New Profile</div>
+                  <form id="profileCreateForm" class="stack-form">
+                    <div class="input-with-btn">
+                      <input id="profileNameInput" type="text" class="text-input" required maxlength="24" placeholder="Profile name..." />
+                      <input id="profileColorInput" type="color" value="#a855f7" class="color-picker color-picker-inline" />
+                    </div>
+                    <label id="profileCopyRow" class="check-row">
+                      <input id="profileCopyGames" type="checkbox" />
+                      <span>Copy games from active profile</span>
+                    </label>
+                    <div class="form-actions-row">
+                      <button type="button" id="btnProfileCancelEdit" class="btn-secondary btn-sm hidden">Cancel</button>
+                      <button type="submit" id="btnProfileSubmit" class="btn-primary btn-sm">Create Profile</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
 
-                      <div class="discord-live-section">
-                        <div class="discord-live-sec-title">ROLES</div>
-                        <div id="discordLiveRoles" class="discord-live-roles"></div>
-                      </div>
+              <!-- COL 3: ALWAYS-VISIBLE PINNED LIVE DISCORD PROFILE CARD -->
+              <div class="pw-preview">
+                <div class="preview-label-eyebrow">LIVE PROFILE PREVIEW</div>
+                <div id="discordLiveCard" class="discord-live-card">
+                  <div id="discordLiveEffectLayer" class="discord-effect-layer effect-none" aria-hidden="true"></div>
+                  <div id="discordLiveBanner" class="discord-live-banner">
+                    <span class="discord-edit-pill">✎ Customizing</span>
+                  </div>
+                  <div class="discord-live-header-row">
+                    <div id="discordLiveAvatarWrap" class="discord-live-avatar-wrap deco-none">
+                      <img id="discordLiveAvatarImg" class="discord-live-avatar-img" src="./assets/maxmb/icons/avatars/firmware/000.png" alt="" />
+                      <img id="discordLiveDecoImg" class="avatar-deco-overlay hidden" alt="" />
+                      <span id="discordLiveStatusDot" class="live-status-dot status-online"></span>
+                    </div>
+                    <div id="discordLiveThoughtBubble" class="discord-thought-bubble">
+                      <span id="discordLiveThoughtText">Just browsing GLauncher…</span>
+                    </div>
+                  </div>
+                  <div class="discord-live-body">
+                    <div class="discord-live-badges-row">
+                      <span class="dc-badge" title="GLauncher Alpha Pioneer">💿</span>
+                      <span class="dc-badge" title="Profile Customizer">✨</span>
+                      <span class="dc-badge" title="Voice Ready">🎧</span>
+                    </div>
+                    <div id="discordLiveName" class="discord-live-name">Player 1</div>
+                    <div id="discordLiveSubHandle" class="discord-live-subhandle">@player1</div>
 
-                      <div class="discord-live-activity">
-                        <div class="discord-live-sec-title">CUSTOMISING MY PROFILE</div>
-                        <div class="discord-activity-row">
-                          <div class="discord-activity-icon">✏️</div>
-                          <div>
-                            <div class="discord-activity-title">User Profile</div>
-                            <div id="discordLiveElapsed" class="discord-activity-sub">00:01 elapsed</div>
-                          </div>
+                    <div class="discord-live-section">
+                      <div class="discord-live-sec-title">ABOUT ME</div>
+                      <div id="discordLiveBio" class="discord-live-bio">Collector of physical discs, PS3 XMB enthusiast &amp; achievement hunter.</div>
+                    </div>
+
+                    <div class="discord-live-section">
+                      <div class="discord-live-sec-title">ROLES</div>
+                      <div id="discordLiveRoles" class="discord-live-roles"></div>
+                    </div>
+
+                    <div class="discord-live-activity">
+                      <div class="discord-live-sec-title">CUSTOMISING MY PROFILE</div>
+                      <div class="discord-activity-row">
+                        <div class="discord-activity-icon">✏️</div>
+                        <div>
+                          <div class="discord-activity-title">User Profile</div>
+                          <div id="discordLiveElapsed" class="discord-activity-sub">00:01 elapsed</div>
                         </div>
                       </div>
-
-                      <div class="discord-live-section">
-                        <div class="discord-live-sec-title">MEMBER SINCE</div>
-                        <div id="discordLiveMemberSince" class="discord-live-since">💿 GLauncher Alpha</div>
-                      </div>
-
-                      <button type="button" id="discordLiveExampleBtn" class="discord-example-btn">Profile Active</button>
                     </div>
+
+                    <div class="discord-live-section">
+                      <div class="discord-live-sec-title">MEMBER SINCE</div>
+                      <div id="discordLiveMemberSince" class="discord-live-since">💿 GLauncher Alpha</div>
+                    </div>
+
+                    <button type="button" id="discordLiveExampleBtn" class="discord-example-btn">Profile Active</button>
                   </div>
+                </div>
 
-                  <div id="discordEffectInfoBox" class="discord-effect-info-box">
-                    <strong id="discordEffectInfoTitle">No Profile Effect</strong>
-                    <span id="discordEffectInfoDesc">Select any animated effect on the left to preview it live on your profile card!</span>
-                  </div>
+                <div id="discordEffectInfoBox" class="discord-effect-info-box">
+                  <strong id="discordEffectInfoTitle">No Profile Effect</strong>
+                  <span id="discordEffectInfoDesc">Select any animated effect to preview it live!</span>
                 </div>
               </div>
-            </div>
-
-            <!-- PS3 XMB Player Card & Firmware Asset Customization -->
-            <div class="panel-group">
-              <div class="group-label">PS3 XMB Firmware &amp; MaXMB Customization</div>
-
-              <div class="split-2">
-                <div class="form-field">
-                  <label for="settingXmbWaveStyle">PS3 Wave Engine</label>
-                  <select id="settingXmbWaveStyle" class="select-input">
-                    <option value="original">Original PS3 (lines.qrc 4.93)</option>
-                    <option value="complex">MaXMB Complex Spline</option>
-                  </select>
-                </div>
-                <div class="form-field">
-                  <label for="settingXmbBgColor">PS3 Wave Color</label>
-                  <select id="settingXmbBgColor" class="select-input">
-                    <option value="auto">Original (Month &amp; Time)</option>
-                    <option value="blue">Classic Blue</option>
-                    <option value="royal-blue">Royal Blue</option>
-                    <option value="purple">Purple</option>
-                    <option value="red">Red</option>
-                    <option value="pink">Pink</option>
-                    <option value="orange">Orange</option>
-                    <option value="olive">Olive</option>
-                    <option value="green">Green</option>
-                    <option value="turquoise">Turquoise</option>
-                    <option value="brown">Brown</option>
-                    <option value="silver">Silver</option>
-                    <option value="black">Black</option>
-                    <option value="month:0">January</option>
-                    <option value="month:1">February</option>
-                    <option value="month:2">March</option>
-                    <option value="month:3">April</option>
-                    <option value="month:4">May</option>
-                    <option value="month:5">June</option>
-                    <option value="month:6">July</option>
-                    <option value="month:7">August</option>
-                    <option value="month:8">September</option>
-                    <option value="month:9">October</option>
-                    <option value="month:10">November</option>
-                    <option value="month:11">December</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="split-2">
-                <div class="form-field">
-                  <label for="settingXmbIconSet">MaXMB Icon Pack</label>
-                  <select id="settingXmbIconSet" class="select-input">
-                    <option value="default">PS3 Official Gloss (4.93)</option>
-                    <option value="flat">MaXMB Flat Icons</option>
-                    <option value="vice">MaXMB Neon Vice Icons</option>
-                  </select>
-                </div>
-                <div class="form-field">
-                  <label for="settingXmbSoundSet">XMB Sound Pack</label>
-                  <select id="settingXmbSoundSet" class="select-input">
-                    <option value="ps3">PS3 Original Sounds</option>
-                    <option value="ps4">PS4 System Sounds</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="split-2">
-                <div class="form-field">
-                  <label for="psnCardColorInput">PSN Player Card Color</label>
-                  <input id="psnCardColorInput" type="color" value="#1d4ed8" class="color-picker" />
-                </div>
-                <div class="form-field">
-                  <label for="psnCommentInput">PSN Status Comment</label>
-                  <input id="psnCommentInput" type="text" class="text-input" maxlength="60" placeholder="Welcome to my PS3 XMB!" />
-                </div>
-              </div>
-
-              <div class="split-2" style="margin-top:6px;">
-                <label class="check-row">
-                  <input id="settingXmbSounds" type="checkbox" checked />
-                  <span>XMB Navigation Sounds</span>
-                </label>
-                <label class="check-row">
-                  <input id="settingXmbIntro" type="checkbox" checked />
-                  <span>PS3 Coldboot Intro</span>
-                </label>
-              </div>
-
-              <div class="form-field" style="margin-top:10px;">
-                <label>Custom XMB Video (.mp4) / Image Wallpaper (Saved in <code>ps3_video</code> / <code>ps3_pic</code>)</label>
-                <div class="input-with-btn">
-                  <input id="xmbWallpaperInput" type="text" class="text-input" placeholder="Using Authentic PS3 Wave (lines.qrc)" readonly />
-                  <button type="button" id="btnPickXmbWallpaper" class="btn-secondary btn-sm">Pick MP4 / Img…</button>
-                  <button type="button" id="btnClearXmbWallpaper" class="btn-secondary btn-sm">Clear</button>
-                </div>
-              </div>
-
-              <button type="button" id="btnReplayPs3Intro" class="btn-secondary btn-sm" style="margin-top:8px; width:100%;">Replay PS3 Coldboot Intro</button>
-            </div>
-
-            <!-- Remote Auto-Updater -->
-            <div class="panel-group">
-              <div class="group-label">Remote Updates &amp; Patch Notes</div>
-              <div class="form-field">
-                <label for="updateFeedUrlInput">Remote Update Manifest URL (JSON)</label>
-                <div class="input-with-btn">
-                  <input id="updateFeedUrlInput" type="text" class="text-input" placeholder="https://raw.githubusercontent.com/.../update-manifest.json" />
-                  <button type="button" id="btnSaveUpdateFeed" class="btn-secondary btn-sm">Save</button>
-                </div>
-              </div>
-              <div class="split-2" style="margin-top:6px;">
-                <button type="button" id="btnCheckUpdatesNow" class="btn-primary btn-sm">Check for Updates Now</button>
-                <button type="button" id="btnPreviewWhatsNew" class="btn-secondary btn-sm">Preview What's New</button>
-              </div>
-              <div id="updateStatusHint" class="hint-text" style="margin-top:6px;">Current Version: v0.1.0</div>
-            </div>
-
-            <!-- Obsidian Theme & Shader Settings -->
-            <div class="panel-group">
-              <div class="group-label">Theme, Shaders &amp; 3D Quality</div>
-              <div class="split-2">
-                <div class="form-field">
-                  <label for="settingTheme">Active Theme</label>
-                  <select id="settingTheme" class="select-input">
-                    <option value="obsidian">Obsidian Glass (Default Main Theme)</option>
-                    <option value="orbit">Orbit 3D Bubbles (Dropdown + Video/Photo Spheres)</option>
-                    <option value="xmb">PS3 XMB (Firmware 4.93 + MaXMB)</option>
-                    <option value="cyber">Neon Cyber</option>
-                    <option value="walnut">Warm Studio</option>
-                    <option value="arctic">Arctic Slate</option>
-                  </select>
-                </div>
-                <div class="form-field">
-                  <label for="settingBackdropMode">Animated Shader</label>
-                  <select id="settingBackdropMode" class="select-input">
-                    <option value="aurora">Aurora Shader</option>
-                    <option value="silk">React Bits Silk (WebGL)</option>
-                    <option value="iridescence">React Bits Iridescence</option>
-                    <option value="xmb-wave">PS3 lines.qrc Wave</option>
-                    <option value="starfield">Starfield Drift</option>
-                    <option value="cybergrid">Cyber Horizon</option>
-                    <option value="clean">Clean Static</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="split-2">
-                <div class="form-field">
-                  <label for="settingGlassStyle">Glass Material</label>
-                  <select id="settingGlassStyle" class="select-input">
-                    <option value="liquid">Liquid Glass</option>
-                    <option value="carbon">Brushed Carbon</option>
-                    <option value="matte">Minimal Matte</option>
-                  </select>
-                </div>
-                <div class="form-field">
-                  <label for="settingGraphicsQuality">3D Graphics</label>
-                  <select id="settingGraphicsQuality" class="select-input">
-                    <option value="high">High (Best)</option>
-                    <option value="balanced">Balanced</option>
-                    <option value="performance">Max FPS</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="split-2">
-                <div class="form-field">
-                  <label for="settingPfpFrame">PFP Ring Style</label>
-                  <select id="settingPfpFrame" class="select-input">
-                    <option value="dev-sparkle">✦ Dev Sparkle Crown (Thick Ring + Sparkles)</option>
-                    <option value="neon">Neon Glow</option>
-                    <option value="holo">Holographic</option>
-                    <option value="gold">Gold Trim</option>
-                    <option value="minimal">Minimal</option>
-                  </select>
-                </div>
-                <div class="form-field">
-                  <label for="settingUiAccent">Accent Color</label>
-                  <input id="settingUiAccent" type="color" value="#38bdf8" class="color-picker" />
-                </div>
-              </div>
-            </div>
-
-            <div class="panel-group">
-              <div class="group-label" id="profileFormTitle">Create New Profile</div>
-              <form id="profileCreateForm" class="stack-form">
-                <div class="input-with-btn">
-                  <input id="profileNameInput" type="text" class="text-input" required maxlength="24" placeholder="Profile name..." />
-                  <input id="profileColorInput" type="color" value="#a855f7" class="color-picker color-picker-inline" />
-                </div>
-                <label id="profileCopyRow" class="check-row">
-                  <input id="profileCopyGames" type="checkbox" />
-                  <span>Copy games from active profile</span>
-                </label>
-                <div class="form-actions-row">
-                  <button type="button" id="btnProfileCancelEdit" class="btn-secondary btn-sm hidden">Cancel</button>
-                  <button type="submit" id="btnProfileSubmit" class="btn-primary btn-sm">Create Profile</button>
-                </div>
-              </form>
             </div>
           </section>
 

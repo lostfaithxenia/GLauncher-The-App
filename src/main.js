@@ -838,6 +838,8 @@ function waitForGameWindowAndSuspend(exeName, pid) {
   }, 400);
 }
 
+let resumePendingTimer = null;
+
 function resumeLauncherFromGame() {
   clearGameWaitTimer();
   stopTrophyWatch();
@@ -845,34 +847,26 @@ function resumeLauncherFromGame() {
     clearInterval(gameWatchTimer);
     gameWatchTimer = null;
   }
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    try {
-      mainWindow.setBackgroundColor('#090b10');
-      mainWindow.setOpacity(0.08);
-    } catch {
-      // ignore on platforms without opacity
-    }
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  // Wake renderer & repaint BEFORE showing window so Windows DWM never flashes a blank black/white frame
+  try {
+    mainWindow.setBackgroundColor('#07090d');
+    mainWindow.setOpacity(1);
+    mainWindow.webContents.send('launcher:suspended', false);
+    mainWindow.webContents.invalidate();
+  } catch {}
+
+  if (resumePendingTimer) clearTimeout(resumePendingTimer);
+  resumePendingTimer = setTimeout(() => {
+    resumePendingTimer = null;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.setOpacity(1);
     mainWindow.show();
     mainWindow.focus();
-    mainWindow.webContents.send('launcher:suspended', false);
-
-    let step = 0;
-    const steps = 14;
-    const fadeTimer = setInterval(() => {
-      step++;
-      if (!mainWindow || mainWindow.isDestroyed()) {
-        clearInterval(fadeTimer);
-        return;
-      }
-      try {
-        mainWindow.setOpacity(Math.min(1, step / steps));
-      } catch {
-        clearInterval(fadeTimer);
-      }
-      if (step >= steps) clearInterval(fadeTimer);
-    }, 20);
-  }
+    mainWindow.webContents.invalidate();
+  }, 140);
 }
 
 function startProcessWatch(exeName) {

@@ -5659,24 +5659,14 @@ function showWhatsNewModal(data) {
 }
 
 function playReturnToLauncherTransition() {
-  if (!els.gameReturnTransition) return;
-  if (els.gameReturnBadge) {
-    els.gameReturnBadge.textContent =
-      activeSettings().theme === 'xmb' ? 'Returning to XMB…' : 'Returning to Launcher…';
-  }
+  // Never cover the stage with a plain opaque full-screen curtain — keep the live theme visible!
+  els.gameReturnTransition?.classList.add('hidden');
+  els.gameReturnTransition?.classList.remove('active');
   document.body.classList.remove('game-return-anim');
-  els.gameReturnTransition.classList.remove('hidden', 'active');
-  void els.gameReturnTransition.offsetWidth;
-  document.body.classList.add('game-return-anim');
-  els.gameReturnTransition.classList.add('active');
   if (activeSettings().theme === 'xmb') {
     playXmbSfx('ok');
   }
-  setTimeout(() => {
-    els.gameReturnTransition?.classList.add('hidden');
-    els.gameReturnTransition?.classList.remove('active');
-    document.body.classList.remove('game-return-anim');
-  }, 880);
+  showToast('Welcome back to GLauncher');
 }
 
 async function initUpdaterUi() {
@@ -5810,10 +5800,20 @@ async function init() {
       if (els.obsidianHeroBackdrop) els.obsidianHeroBackdrop.dataset.heroUrl = '';
       applyProfileThemeAndGraphics();
       backdrop?.resize?.();
+      try { backdrop?.draw?.(); } catch {}
       backdrop?.start?.();
-      stage3d?.resize?.();
-      stage3d?.start?.();
+      if (activeSettings().theme !== 'xmb' && activeSettings().theme !== 'orbit') {
+        stage3d?.resize?.();
+        stage3d?.start?.();
+      }
       render();
+      requestAnimationFrame(() => {
+        backdrop?.resize?.();
+        try { backdrop?.draw?.(); } catch {}
+        if (activeSettings().theme === 'orbit') renderOrbit();
+        else if (activeSettings().theme === 'xmb') renderXmb();
+        else stage3d?.resize?.();
+      });
       playReturnToLauncherTransition();
     }
   });
@@ -6193,6 +6193,17 @@ function renderDiscordLivePreview() {
 }
 
 function initDiscordProfileStudio() {
+  // 0. Wire Zero-Scroll Profile Workbench Sidebar Sub-Tabs
+  const pwBtns = document.querySelectorAll('.pw-nav-btn');
+  const pwPanes = document.querySelectorAll('.pw-pane');
+  pwBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.pw;
+      pwBtns.forEach((b) => b.classList.toggle('active', b === btn));
+      pwPanes.forEach((p) => p.classList.toggle('hidden', p.dataset.pwPane !== key));
+    });
+  });
+
   // 1. Render Circular Color Swatches
   const swatchGrid = document.getElementById('profileColorSwatchGrid');
   if (swatchGrid) {
